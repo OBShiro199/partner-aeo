@@ -1,14 +1,14 @@
 "use client";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import confetti from "canvas-confetti";
 import { ArrowLeft, ArrowRight, Check, Plus, Trash, Sparkle, ChartLineUp, UsersThree, Flask, Compass } from "@phosphor-icons/react";
 import { Gate } from "@/components/gate";
 import { Wordmark } from "@/components/brand";
-import { Button, cx, Favicon, Field, LiveStatus } from "@/components/ui";
+import { Button, cx, Favicon, Field, Kbd, LiveStatus } from "@/components/ui";
 import { EnginePicker, RegionGrid } from "@/components/pickers";
 import { useApp } from "@/lib/store";
-import { repo } from "@/lib/repo";
+import { isDemo, repo } from "@/lib/repo";
 import { CLIENT_BANDS } from "@/lib/regions";
 import { EngineLogo, liveEngineIds, MAX_ENGINES } from "@/lib/engines";
 import { faviconFor, nameFromDomain, normaliseDomain, plural } from "@/lib/format";
@@ -51,14 +51,20 @@ function Onboarding() {
   // An agency that already finished onboarding goes to the dashboard.
   useEffect(() => { if (status === "ready" && d.step < 4 && useApp.getState().agency?.onboarded_at) router.replace("/dashboard"); }, [status, d.step, router]);
 
-  // Height morph for the step body.
-  const body = useRef<HTMLDivElement>(null);
-  const [h, setH] = useState<number | "auto">("auto");
-  useLayoutEffect(() => {
-    const el = body.current!;
-    const ro = new ResizeObserver(() => setH(el.offsetHeight));
-    ro.observe(el);
-    return () => ro.disconnect();
+  // Enter moves to the next step (buttons and textareas keep their own Enter behaviour).
+  const nextRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Enter" || e.isComposing || e.shiftKey) return;
+      const el = e.target as HTMLElement;
+      // Choice tiles (radios, toggles) advance on Enter; real buttons, links and textareas keep their own Enter.
+      const choice = el.closest("[role=radio], [aria-pressed]");
+      if (!choice && el.closest("button, a, textarea, [role=menu]")) return;
+      e.preventDefault();
+      nextRef.current();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
   }, []);
 
   async function next() {
@@ -96,17 +102,19 @@ function Onboarding() {
     }
     set({ step: d.step + 1 });
   }
+  useEffect(() => { nextRef.current = () => { if (d.step < 4 && !busy) next(); }; });
 
   return (
-    <div className="relative min-h-dvh flex flex-col">
+    <div className="relative h-dvh overflow-hidden flex flex-col">
       <div className="absolute inset-0 grid-bg grid-fade" aria-hidden />
-      <header className="relative h-14 flex items-center justify-between px-5">
+      <header className="relative h-14 flex-none flex items-center justify-between px-5">
         <Wordmark />
         <span className="text-faint truncate">{user?.email}</span>
       </header>
-      <main className="relative flex-1 flex items-start justify-center px-4 pt-[6vh] pb-16">
-        <div className="w-full max-w-[860px] card overflow-hidden rise" style={{ boxShadow: "0 24px 64px rgba(8,9,10,.06), 0 1px 2px rgba(8,9,10,.04)" }}>
-          <div className="grid md:grid-cols-[230px_1fr]">
+      <main className="relative flex-1 min-h-0 flex items-center justify-center px-4 pb-6">
+        {/* Fixed-size card: always fits the window, never scrolls the page. */}
+        <div className="w-full max-w-[900px] h-full max-h-[680px] card overflow-hidden rise flex flex-col" style={{ boxShadow: "0 24px 64px rgba(8,9,10,.06), 0 1px 2px rgba(8,9,10,.04)" }}>
+          <div className="grid md:grid-cols-[220px_1fr] flex-1 min-h-0">
             {/* Step rail */}
             <aside className="hair-b md:border-b-0 md:hair-r p-5 bg-row-hover/60">
               <p className="text-faint mb-4">Setup · {Math.min(d.step + 1, 5)} of 5</p>
@@ -126,33 +134,30 @@ function Onboarding() {
               <div className="hidden md:block mt-8 h-1 rounded-full bg-hover overflow-hidden">
                 <div className="h-full bg-blue rounded-full" style={{ width: `${(d.step / 4) * 100}%`, transition: "width 500ms var(--ease-morph)" }} />
               </div>
+              <p className="hidden md:flex items-center gap-1.5 text-faint mt-6 t-12">Press <Kbd>Enter</Kbd> to continue</p>
             </aside>
 
-            <section className="min-w-0">
-              <div className="morph" style={{ height: h }}>
-                <div ref={body}>
-                  <div key={d.step} className="step-in p-6 sm:p-8">
-                    {d.step === 0 && <StepAgency d={d} set={set} />}
-                    {d.step === 1 && <StepWebsite d={d} set={(p) => { set(p); if (p.site !== undefined) setMeta(null); }} meta={meta} busy={busy} />}
-                    {d.step === 2 && <StepEngines d={d} set={set} />}
-                    {d.step === 3 && <StepClients d={d} set={set} />}
-                    {d.step === 4 && <StepLaunch d={d} meta={meta} />}
-                    {d.step < 4 && (
-                      <>
-                        <p role="alert" className="field-error mt-4">{error}</p>
-                        <div className="flex items-center justify-between mt-4 pt-5 hair-t">
-                          <Button variant="ghost" onClick={() => { setError(null); set({ step: Math.max(0, d.step - 1) }); }} disabled={d.step === 0}>
-                            <ArrowLeft size={14} /> Back
-                          </Button>
-                          <Button variant="primary" onClick={next} loading={busy} minWidth={150}>
-                            {d.step === 1 && (!meta || meta.domain !== normaliseDomain(d.site)) ? "Find my agency" : d.step === 3 ? "Set up tracking" : "Continue"} <ArrowRight size={14} />
-                          </Button>
-                        </div>
-                      </>
-                    )}
-                  </div>
+            <section className="min-w-0 min-h-0 flex flex-col">
+              <div className="flex-1 min-h-0 overflow-y-auto">
+                <div key={d.step} className="step-in px-6 sm:px-8 pt-6 pb-4">
+                  {d.step === 0 && <StepAgency d={d} set={set} />}
+                  {d.step === 1 && <StepWebsite d={d} set={(p) => { set(p); if (p.site !== undefined) setMeta(null); }} meta={meta} busy={busy} />}
+                  {d.step === 2 && <StepEngines d={d} set={set} />}
+                  {d.step === 3 && <StepClients d={d} set={set} />}
+                  {d.step === 4 && <StepLaunch d={d} meta={meta} />}
                 </div>
               </div>
+              {d.step < 4 && (
+                <div className="flex-none hair-t px-6 sm:px-8 py-3 flex items-center gap-3">
+                  <Button variant="ghost" onClick={() => { setError(null); set({ step: Math.max(0, d.step - 1) }); }} disabled={d.step === 0}>
+                    <ArrowLeft size={14} /> Back
+                  </Button>
+                  <p role="alert" className="flex-1 text-right text-danger-ink truncate">{error}</p>
+                  <Button variant="primary" onClick={next} loading={busy} minWidth={160}>
+                    {d.step === 1 && (!meta || meta.domain !== normaliseDomain(d.site)) ? "Find my agency" : d.step === 3 ? "Set up tracking" : "Continue"} <ArrowRight size={14} />
+                  </Button>
+                </div>
+              )}
             </section>
           </div>
         </div>
@@ -165,8 +170,8 @@ type StepProps = { d: Draft; set: (p: Partial<Draft>) => void };
 
 function StepHead({ eyebrow, title, body }: { eyebrow: string; title: string; body: string }) {
   return (
-    <div className="mb-6">
-      <p className="text-faint mb-1.5">{eyebrow}</p>
+    <div className="mb-5">
+      <p className="text-faint mb-1">{eyebrow}</p>
       <h1 className="h2">{title}</h1>
       <p className="text-muted mt-1.5 t-14 max-w-[520px]">{body}</p>
     </div>
@@ -177,10 +182,10 @@ function StepAgency({ d, set }: StepProps) {
   return (
     <>
       <StepHead eyebrow="Let's set up your workspace" title="How many clients do you manage?" body="We size your workspace and suggest a plan. You can change this any time." />
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-8" role="radiogroup" aria-label="Number of clients">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-6" role="radiogroup" aria-label="Number of clients">
         {CLIENT_BANDS.map((b) => (
           <button key={b.id} role="radio" aria-checked={d.band === b.id} onClick={() => set({ band: b.id })}
-            className={cx("h-[68px] rounded-md border px-3 text-left transition-colors", d.band === b.id ? "border-blue-edge bg-blue-soft" : "border-hairline hover:bg-row-hover")}>
+            className={cx("h-14 rounded-md border px-3 text-left transition-colors", d.band === b.id ? "border-blue-edge bg-blue-soft" : "border-hairline hover:bg-row-hover")}>
             <span className="block text-ink font-medium t-16 tnum">{b.label}</span>
             <span className="block text-faint">{b.hint}</span>
           </button>
@@ -365,7 +370,7 @@ function StepLaunch({ d, meta }: { d: Draft; meta: { domain: string; favicon_url
   return (
     <div>
       {phase === "done" ? (
-        <StepHead eyebrow="You're live" title={`${d.agencyName} is ready`} body={`${plural(jobs.length, "client")}, ${plural(promptCount, "prompt")} and ${plural(engines.length, "engine")}. Sample history is loaded so you can explore while the first live checks run.`} />
+        <StepHead eyebrow="You're live" title={`${d.agencyName} is ready`} body={`${plural(jobs.length, "client")}, ${plural(promptCount, "prompt")} and ${plural(engines.length, "engine")}. ${isDemo ? "Sample history is loaded so you can explore." : "Run your first live check from the API lab or a client's prompts."}`} />
       ) : (
         <StepHead eyebrow="Setting up" title="Building your workspace" body="Reading each client's website and asking Claude Haiku to write the prompts their buyers type into AI." />
       )}

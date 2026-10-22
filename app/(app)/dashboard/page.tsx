@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CaretDown, Check, Compass, Plus, UsersThree, ArrowUpRight } from "@phosphor-icons/react";
+import { ArrowRight, CaretDown, Check, Compass, Plus, UsersThree, ArrowUpRight, Lightning } from "@phosphor-icons/react";
 import { useApp } from "@/lib/store";
 import { isDemo } from "@/lib/repo";
 import { ENGINES, EngineLogo, engineById, liveEngineIds } from "@/lib/engines";
@@ -114,8 +114,19 @@ export default function Dashboard() {
           <Kpi label="Average position" hint="Rank when the answer is a list" value={sum.avgPosition == null ? "–" : sum.avgPosition.toFixed(1)} delta={sum.avgPosition != null && prev.avgPosition != null ? prev.avgPosition - sum.avgPosition : null} />
         </section>
 
+        {!scoped.length && (
+          <section className="hair-b">
+            <Empty
+              icon={<Lightning size={18} />}
+              title={client ? `No checks for ${client.name} yet` : "No checks yet"}
+              body="Numbers appear here once real answers come in. Run one live check to start: one prompt on one engine."
+              action={<Link href={client ? `/clients/${client.id}` : "/lab"} className="btn btn-primary"><Lightning size={14} weight="fill" className="text-blue" /> Run a live check</Link>}
+            />
+          </section>
+        )}
+
         {/* Trend + engines */}
-        <section className="grid grid-cols-1 xl:grid-cols-3 hair-b">
+        {scoped.length > 0 && <section className="grid grid-cols-1 xl:grid-cols-3 hair-b">
           <div className="xl:col-span-2 xl:hair-r p-4 md:p-6">
             <PanelHead title="Visibility over time" sub={`Weekly, ${client ? client.name : "all clients"}`} />
             <TrendChart data={trend} height={220} />
@@ -137,7 +148,7 @@ export default function Dashboard() {
             </ul>
             <ComingSoon />
           </div>
-        </section>
+        </section>}
 
         {client ? <ClientDetail clientId={client.id} engines={shownEngines} current={current} /> : <Book engines={shownEngines} />}
 

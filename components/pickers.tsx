@@ -48,8 +48,8 @@ export function RegionSelect({ value, onChange, options, id }: { value: string; 
 export function RegionGrid({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
   const toggle = (code: string) => onChange(value.includes(code) ? value.filter((x) => x !== code) : [...value, code]);
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-      {REGIONS.slice(0, 18).concat(REGIONS.filter((r) => r.code === "GLOBAL")).map((r) => {
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1.5">
+      {REGIONS.slice(0, 19).concat(REGIONS.filter((r) => r.code === "GLOBAL")).map((r) => {
         const on = value.includes(r.code);
         return (
           <button
@@ -58,7 +58,7 @@ export function RegionGrid({ value, onChange }: { value: string[]; onChange: (v:
             aria-pressed={on}
             onClick={() => toggle(r.code)}
             className={cx(
-              "group h-10 flex items-center gap-2.5 px-3 rounded-md border text-left transition-colors",
+              "group h-9 flex items-center gap-2.5 px-2.5 rounded-md border text-left transition-colors",
               on ? "border-blue-edge bg-blue-soft text-ink" : "border-hairline hover:bg-row-hover text-body",
             )}
           >
