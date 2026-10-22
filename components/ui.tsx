@@ -115,7 +115,12 @@ export function Dialog({ open, onClose, children, width = 520, labelledBy }: { o
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
-    setTimeout(() => inner.current?.querySelector<HTMLElement>("[autofocus], input, button")?.focus(), 30);
+    // Focus the first field (not the close button), unless the user already focused something inside.
+    setTimeout(() => {
+      const root = inner.current;
+      if (!root || root.contains(document.activeElement)) return;
+      (root.querySelector<HTMLElement>("input, textarea, select") ?? root.querySelector<HTMLElement>("button"))?.focus();
+    }, 30);
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
