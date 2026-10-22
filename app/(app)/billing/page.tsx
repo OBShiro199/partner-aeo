@@ -9,8 +9,8 @@ import type { UsageRow } from "@/lib/types";
 import { Toolbar } from "@/components/shell/Toolbar";
 import { Button, cx, Meter } from "@/components/ui";
 
-// Unit cost behind each plan: ~$0.02 per check (DataForSEO task + model + web search),
-// 10 prompts x 4 engines x ~4.3 weekly scans = 172 checks, about $3.44 per client per month.
+// Unit cost behind each plan: ~$0.026 per check, measured (ChatGPT $0.030, Perplexity $0.006, Gemini $0.037),
+// 10 prompts x 4 engines x ~4.3 weekly scans = 172 checks, about $4.40 per client per month.
 const PLANS = [
   { id: "starter", name: "Starter", price: 149, clients: 10, seats: 3, cadence: "Weekly scans", features: ["4 live answer engines", "10 prompts per client", "Client dashboards", "CSV export*"] },
   { id: "growth", name: "Growth", price: 349, clients: 30, seats: 10, cadence: "Weekly scans, on-demand checks", features: ["Everything in Starter", "Competitor share of voice", "White-label reports*", "Priority support"], popular: true },
@@ -27,7 +27,7 @@ export default function BillingPage() {
   const dfsCalls = month.filter((u) => u.provider === "dataforseo" && u.status === "ok").length;
   const engines = liveEngineIds(a.engines).length;
   const prompts = s.prompts.filter((p) => p.active).length;
-  const projected = prompts * engines * 4.3 * 0.02;
+  const projected = prompts * engines * 4.3 * 0.026;
 
   return (
     <>

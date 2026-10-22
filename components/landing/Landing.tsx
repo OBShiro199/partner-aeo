@@ -320,7 +320,7 @@ function Numbers() {
     { v: 4, s: "", l: "engines live today, 10 on the roadmap" },
     { v: 10, s: "", l: "buyer prompts tracked per client" },
     { v: 40, s: "", l: "answers read per client, every scan" },
-    { v: 3.5, s: "", p: "$", d: 1, l: "average API cost per client per month" },
+    { v: 4.4, s: "", p: "$", d: 1, l: "average API cost per client per month" },
   ];
   return (
     <section className="hair-b relative overflow-hidden">
@@ -406,7 +406,7 @@ const FAQS = [
   { q: "Is this what a customer actually sees?", a: "Close to it. We query each engine through its API with web search on, via DataForSEO. That approximates a searching user, but isn't identical to a signed-in consumer session." },
   { q: "How are prompts chosen?", a: "Claude Haiku reads each client's homepage and writes up to 10 prompts across four intents: best-for, problem-led, comparison and local. You can edit, pause or add your own." },
   { q: "Can my team share one workspace?", a: "Yes. Each agency is a tenant with seats. Owners and admins manage clients, billing and invites; members work on clients." },
-  { q: "What does it cost to run?", a: "Each check costs DataForSEO roughly one to three cents. A client with 10 prompts on 4 engines, scanned weekly, is about $3.50 a month in API fees. That's included in your plan." },
+  { q: "What does it cost to run?", a: "Each check costs DataForSEO roughly one to three cents. A client with 10 prompts on 4 engines, scanned weekly, is about $4.40 a month in API fees. That's included in your plan." },
 ];
 
 function Faq() {

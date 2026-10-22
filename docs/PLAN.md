@@ -36,23 +36,33 @@ DeepSeek, Grok, Copilot, Meta AI and Le Chat are selectable but marked "coming s
 
 The DataForSEO LLM Responses live price is **$0.0006 per task plus the model's own token cost** (plus web search where used). The exact amount comes back in `tasks[].cost`, and we store it.
 
+Measured on 22 Oct 2026 with one live check per engine ("What is the best AI receptionist for small businesses in the UK?"):
+
+| Engine (model) | Cost per check | Notes |
+| --- | --- | --- |
+| ChatGPT (`gpt-4.1-mini`, web search) | **$0.0300** | ~8.2k input tokens of search results |
+| Perplexity (`sonar`) | **$0.0060** | Cheapest; numbered citations |
+| Gemini (`gemini-2.5-flash`, web search) | **$0.0375** | Citations are Google redirects; real URL is in `direct_url` |
+| Claude (`claude-haiku-4-5`, web search) | not measured yet | Expect ~$0.02 to $0.04 |
+
 | Unit | Estimate |
 | --- | --- |
-| One check (1 prompt × 1 engine, web search) | $0.005 to $0.03, call it **$0.02** |
-| One client scan (10 prompts × 4 engines) | 40 checks ≈ **$0.80** |
-| One client per month, weekly scans | 172 checks ≈ **$3.40** |
+| One client scan (10 prompts × 4 engines) | ≈ **$1.03** |
+| One client per month, weekly scans | ≈ **$4.40** |
 | Prompt generation with Haiku | ≈ $0.0005 per client |
 | Supabase Pro | $25/month base |
 
-**Test budget now:** $1 on DataForSEO. The platform cap is 3 checks or $0.30, whichever comes first, one prompt × one engine at a time.
+**Test budget:** 3 live checks used, $0.0735 of the $1 DataForSEO balance. The platform cap in Supabase is still 3 checks or $0.30, one prompt × one engine at a time.
+
+Cost levers: use Perplexity `sonar` (5× cheaper) for high-volume prompts, keep web search on only where it changes answers, and scan weekly by default.
 
 ## 5. Pricing (proposal)
 
 | Plan | Price | Clients | Seats | Scans | API cost at cap | Gross margin |
 | --- | --- | --- | --- | --- | --- | --- |
-| Starter | $149/mo | 10 | 3 | Weekly | ~$34 | ~77% |
-| Growth | $349/mo | 30 | 10 | Weekly, plus on-demand | ~$103 | ~70% |
-| Scale | $899/mo | 100 | 50 | Twice weekly | ~$600 | ~33% at full use (raise to $1,199, or keep weekly) |
+| Starter | $149/mo | 10 | 3 | Weekly | ~$44 | ~70% |
+| Growth | $349/mo | 30 | 10 | Weekly, plus on-demand | ~$132 | ~62% |
+| Scale | $899/mo | 100 | 50 | Twice weekly | ~$880 | breaks even at full use: price at $1,499, or keep it weekly (~$440, 51%) |
 
 Most agencies won't use every slot, so real margins sit higher. Add-ons later: extra clients at $9 each per month, white-label PDF reports, daily scans for priority clients.
 

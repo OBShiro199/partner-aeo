@@ -43,8 +43,8 @@ function listPosition(text: string, variants: string[]): number | null {
   const lines = text.split(/\n/);
   let item = 0;
   for (const line of lines) {
-    // A list item: "1. X", "- X", "### X", or a line that opens with a bold name ("**X**").
-    if (/^\s*(\d+[.)]|[-*•])\s+/.test(line) || /^\s*#{2,4}\s+/.test(line) || /^\s*\*\*[^*]+\*\*/.test(line)) {
+    // A list item: "1. X", "- X", "### X", or a line that opens with a bold name ("**X**", not a "**Heading:**").
+    if (/^\s*(\d+[.)]|[-*•])\s+/.test(line) || /^\s*#{2,4}\s+/.test(line) || /^\s*\*\*[^*]+[^:*]\*\*(?!:)/.test(line)) {
       item++;
       if (firstIndexOf(line, variants) >= 0) return item;
     }
@@ -101,8 +101,10 @@ export function extractDfs(result: unknown): { text: string; citations: Citation
     // Annotations carry the cited snippet in `text` too; only take text from blocks without a url.
     if (typeof o.text === "string" && o.text.length > 0 && typeof o.url !== "string") texts.push(o.text);
     if (typeof o.url === "string" && /^https?:\/\//.test(o.url)) {
-      const d = domainOf(o.url);
-      if (d && !urls.has(o.url)) urls.set(o.url, { url: o.url, domain: d, title: typeof o.title === "string" ? o.title : undefined });
+      // Gemini cites Google redirect links; the real page is in direct_url.
+      const url = typeof o.direct_url === "string" && /^https?:\/\//.test(o.direct_url) ? o.direct_url : o.url;
+      const d = domainOf(url);
+      if (d && !urls.has(url)) urls.set(url, { url, domain: d, title: typeof o.title === "string" ? o.title : undefined });
     }
     for (const [k, v] of Object.entries(o)) if (k !== "text" && typeof v === "object") walk(v, depth + 1);
   };

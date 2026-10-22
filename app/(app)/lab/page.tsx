@@ -11,8 +11,8 @@ import { Toolbar } from "@/components/shell/Toolbar";
 import { AnswerText } from "@/components/AnswerText";
 import { Button, cx, Empty, Favicon, Field, LiveStatus, Menu, Meter } from "@/components/ui";
 
-// Rough per-check estimates: $0.0006 DataForSEO task fee + model tokens (~150 in / ~600 out) + web search where used.
-const ESTIMATE: Record<string, string> = { chatgpt: "≈ $0.01–0.03", claude: "≈ $0.01–0.02", gemini: "≈ $0.005–0.04", perplexity: "≈ $0.006–0.01" };
+// Per-check cost measured on live checks (22 Oct 2026); Claude not measured yet.
+const ESTIMATE: Record<string, string> = { chatgpt: "≈ $0.030", claude: "≈ $0.02–0.04", gemini: "≈ $0.037", perplexity: "≈ $0.006" };
 
 export default function LabPage() {
   const s = useApp();
