@@ -44,7 +44,13 @@ async function dfs(path, body) {
     headers: { Authorization: AUTH, "Content-Type": "application/json" },
     body: body ? JSON.stringify(body) : undefined,
   });
-  return res.json();
+  const json = await res.json();
+  // Account-level errors (unverified account, bad login, no funds) come back with no tasks.
+  if (json?.status_code !== 20000) {
+    console.error(`DataForSEO ${json?.status_code}: ${json?.status_message}`);
+    process.exit(3);
+  }
+  return json;
 }
 
 function arg(name) {
@@ -72,7 +78,7 @@ if (cmd === "balance") {
     console.error(`Stopped: test budget used (${usage.calls.length}/${MAX_CALLS} calls, $${usage.spent.toFixed(4)}). Delete ${USAGE_FILE} to reset on purpose.`);
     process.exit(2);
   }
-  const task = { user_prompt: prompt, model_name: arg("model") ?? cfg.model, max_output_tokens: 700 };
+  const task = { user_prompt: prompt, model_name: arg("model") ?? cfg.model, max_output_tokens: 1500 };
   if (cfg.webSearch) task.web_search = true;
   const t0 = Date.now();
   let r = await dfs(`ai_optimization/${cfg.path}/llm_responses/live`, [task]);
@@ -83,6 +89,10 @@ if (cmd === "balance") {
     t = r?.tasks?.[0];
   }
   const cost = Number(t?.cost ?? 0);
+  if (t?.status_code !== 20000 && cost === 0) {
+    console.error(`Task failed, not billed: ${t?.status_code} ${t?.status_message}`);
+    process.exit(3);
+  }
   usage.calls.push({ at: new Date().toISOString(), engine, prompt, cost, status: t?.status_code });
   usage.spent += cost;
   writeFileSync(USAGE_FILE, JSON.stringify(usage, null, 2));

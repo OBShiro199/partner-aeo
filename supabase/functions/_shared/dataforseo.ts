@@ -64,7 +64,7 @@ export async function llmResponse(engine: DfsEngine, prompt: string): Promise<Df
   };
 
   const started = Date.now();
-  const full: Record<string, unknown> = { user_prompt: prompt, model_name: model, max_output_tokens: 700 };
+  const full: Record<string, unknown> = { user_prompt: prompt, model_name: model, max_output_tokens: 1500 };
   if (cfg.webSearch) full.web_search = true;
   let { res, body } = await send(full);
   let task = body?.tasks?.[0];

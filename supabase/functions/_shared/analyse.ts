@@ -43,7 +43,8 @@ function listPosition(text: string, variants: string[]): number | null {
   const lines = text.split(/\n/);
   let item = 0;
   for (const line of lines) {
-    if (/^\s*(\d+[.)]|[-*•])\s+/.test(line) || /^\s*#{2,4}\s+\d*/.test(line)) {
+    // A list item: "1. X", "- X", "### X", or a line that opens with a bold name ("**X**").
+    if (/^\s*(\d+[.)]|[-*•])\s+/.test(line) || /^\s*#{2,4}\s+/.test(line) || /^\s*\*\*[^*]+\*\*/.test(line)) {
       item++;
       if (firstIndexOf(line, variants) >= 0) return item;
     }
@@ -97,7 +98,8 @@ export function extractDfs(result: unknown): { text: string; citations: Citation
     if (Array.isArray(node)) return node.forEach((n) => walk(n, depth + 1));
     if (typeof node !== "object") return;
     const o = node as Record<string, unknown>;
-    if (typeof o.text === "string" && o.text.length > 0) texts.push(o.text);
+    // Annotations carry the cited snippet in `text` too; only take text from blocks without a url.
+    if (typeof o.text === "string" && o.text.length > 0 && typeof o.url !== "string") texts.push(o.text);
     if (typeof o.url === "string" && /^https?:\/\//.test(o.url)) {
       const d = domainOf(o.url);
       if (d && !urls.has(o.url)) urls.set(o.url, { url: o.url, domain: d, title: typeof o.title === "string" ? o.title : undefined });

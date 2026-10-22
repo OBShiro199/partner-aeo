@@ -4,7 +4,7 @@
 // Claude Haiku 5.5 reads the client's homepage and writes up to 10 prompts a real
 // buyer would type into an AI assistant ("best CRM for plumbers in Leeds").
 // Falls back to templates when ANTHROPIC_API_KEY is not set.
-import Anthropic from "npm:@anthropic-ai/sdk";
+import Anthropic from "npm:@anthropic-ai/sdk@1.1.0";
 import {
   admin, fetchSite, handle, htmlToText, HttpError, json, logUsage, normaliseDomain, requireMember, requireUser,
 } from "../_shared/common.ts";
