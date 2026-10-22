@@ -80,7 +80,7 @@ export function EnginePicker({ value, onChange }: { value: string[]; onChange: (
     else if (value.length < MAX_ENGINES) onChange([...value, id]);
   };
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
       {ENGINES.map((e) => {
         const on = value.includes(e.id);
         return (

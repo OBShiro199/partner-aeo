@@ -70,7 +70,7 @@ export default function SettingsPage() {
           <Section id="team" title="Team and seats" sub={`${s.members.length + s.invites.length} of ${a.seat_limit} seats used. Invites hold a seat until accepted.`}>
             <ul className="card divide-y divide-divider mb-4">
               {s.members.map((m) => (
-                <li key={m.user_id} className="h-12 px-4 flex items-center gap-3">
+                <li key={m.user_id} className="min-h-12 py-2 px-4 flex items-center gap-3">
                   <span className="size-7 rounded-full bg-hover grid place-items-center text-muted font-medium">{(m.full_name || m.email).charAt(0).toUpperCase()}</span>
                   <span className="min-w-0 flex-1"><span className="block text-ink truncate">{m.full_name || m.email}</span><span className="block text-faint t-12 truncate">{m.email}</span></span>
                   <span className={cx("tag capitalize", m.role === "owner" && "tag-blue")}>{m.role}</span>
@@ -80,7 +80,7 @@ export default function SettingsPage() {
                 </li>
               ))}
               {s.invites.map((i) => (
-                <li key={i.id} className="h-12 px-4 flex items-center gap-3">
+                <li key={i.id} className="min-h-12 py-2 px-4 flex items-center gap-3">
                   <span className="size-7 rounded-full border border-dashed border-btn-edge" />
                   <span className="min-w-0 flex-1"><span className="block text-body truncate">{i.email}</span><span className="block text-faint t-12">Invite pending</span></span>
                   <span className="tag capitalize">{i.role}</span>

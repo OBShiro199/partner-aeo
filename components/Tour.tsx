@@ -85,9 +85,10 @@ export function Tour({ open, onDone }: { open: boolean; onDone: (skipped: boolea
         <div
           className="fixed rounded-[8px] pointer-events-none"
           style={{
-            top: r.top - PAD, left: r.left - PAD, width: r.width + PAD * 2, height: r.height + PAD * 2,
+            top: 0, left: 0, width: r.width + PAD * 2, height: r.height + PAD * 2,
+            transform: `translate(${r.left - PAD}px, ${r.top - PAD}px)`,
             boxShadow: "0 0 0 9999px rgba(8,9,10,.22), 0 0 0 1px var(--blue-edge), 0 0 0 4px rgba(95,134,224,.18)",
-            transition: "all 360ms var(--ease-morph)",
+            transition: "transform 360ms var(--ease-morph), width 360ms var(--ease-morph), height 360ms var(--ease-morph)",
           }}
         >
           <span className="absolute -inset-1 rounded-[10px] border border-blue" style={{ animation: "ping 1.6s var(--ease-out) infinite" }} />
@@ -101,7 +102,7 @@ export function Tour({ open, onDone }: { open: boolean; onDone: (skipped: boolea
         role="dialog"
         aria-label={step.title}
         className="fixed float p-4 fade-in"
-        style={{ top, left, width: W, transition: "top 360ms var(--ease-morph), left 360ms var(--ease-morph)" }}
+        style={{ top: 0, left: 0, width: W, transform: `translate(${left}px, ${top}px)`, transition: "transform 360ms var(--ease-morph)" }}
       >
         {r && <Scribble dir={arrow} />}
         <div className="flex items-center justify-between mb-2">

@@ -37,8 +37,9 @@ export function Gate({ need, children }: { need: "anon" | "no-agency" | "ready";
   const ok = status === need || (need === "no-agency" && status === "ready");
   if (!ok) {
     return (
-      <div className="min-h-dvh grid place-items-center">
-        <div className="flex items-center gap-3 text-faint fade-in"><span className="spinner" /> Loading workspace</div>
+      // Fixed overlay so swapping it for the page never shifts layout.
+      <div className="fixed inset-0 grid place-items-center pointer-events-none">
+        <div className="flex items-center gap-3 text-faint fade-in" style={{ animationDelay: "200ms" }}><span className="spinner" /> Loading workspace</div>
       </div>
     );
   }
