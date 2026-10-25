@@ -2,6 +2,8 @@ import type {
   Agency, Client, Competitor, DfsStatus, Intent, Invite, NewClientInput, Prompt, Result, Role, SiteMeta, UsageRow, User, Workspace,
 } from "../types";
 
+export type EmailPrefs = { weekly_digest: boolean; alerts: boolean; product: boolean };
+
 export type NewAgencyInput = {
   name: string;
   website: string | null;
@@ -23,6 +25,12 @@ export interface Repo {
   signUp(email: string, password: string, fullName: string): Promise<{ needsConfirmation: boolean }>;
   signIn(email: string, password: string): Promise<void>;
   signOut(): Promise<void>;
+  sendPasswordReset(email: string): Promise<void>;
+  updatePassword(password: string): Promise<void>;
+  emailPrefs(): Promise<EmailPrefs>;
+  setEmailPrefs(patch: Partial<EmailPrefs>): Promise<EmailPrefs>;
+  // Ask the email worker to send anything queued now instead of within the minute.
+  flushEmail(): void;
 
   loadWorkspace(): Promise<Workspace | null>;
   createAgency(input: NewAgencyInput): Promise<Agency>;

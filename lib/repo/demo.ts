@@ -1,7 +1,7 @@
 // Browser-only repo used when NEXT_PUBLIC_DEMO_MODE=1 or Supabase isn't configured.
 // Persists to localStorage and generates clearly-labelled sample answers so every screen can be explored for free.
 import type { Agency, Client, Competitor, Intent, Invite, Member, Prompt, Result, Role, UsageRow, User } from "../types";
-import type { GeneratedPrompts, Repo } from "./types";
+import type { EmailPrefs, GeneratedPrompts, Repo } from "./types";
 import { analyse } from "../../supabase/functions/_shared/analyse";
 import { faviconFor, nameFromDomain, normaliseDomain } from "../format";
 import { engineById, liveEngineIds } from "../engines";
@@ -21,6 +21,7 @@ type Db = {
   prompts: Prompt[];
   results: Result[];
   usage: (UsageRow & { agency_id: string })[];
+  emailPrefs?: EmailPrefs;
 };
 
 const empty = (): Db => ({ users: [], session: null, agencies: [], members: [], invites: [], clients: [], competitors: [], prompts: [], results: [], usage: [] });
@@ -163,6 +164,26 @@ export const demoRepo: Repo = {
     save(d);
     listeners.forEach((l) => l(u));
   },
+  async sendPasswordReset() {
+    await wait(500); // Demo: no email is sent.
+  },
+  async updatePassword(password) {
+    const d = load();
+    const u = me(d);
+    u.password = password;
+    save(d);
+  },
+  async emailPrefs() {
+    return load().emailPrefs ?? { weekly_digest: true, alerts: true, product: true };
+  },
+  async setEmailPrefs(patch) {
+    const d = load();
+    d.emailPrefs = { ...(d.emailPrefs ?? { weekly_digest: true, alerts: true, product: true }), ...patch };
+    save(d);
+    return d.emailPrefs;
+  },
+  flushEmail() {},
+
   async signOut() {
     const d = load();
     d.session = null;

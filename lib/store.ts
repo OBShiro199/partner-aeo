@@ -199,6 +199,7 @@ export const useApp = create<State>((set, get) => ({
   async invite(email, role) {
     const inv = await repo.invite(get().agency!.id, email, role);
     set((s) => ({ invites: [...s.invites, inv] }));
+    repo.flushEmail();
   },
   async revokeInvite(id) {
     await repo.revokeInvite(id);

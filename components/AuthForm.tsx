@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { repo, isDemo } from "@/lib/repo";
@@ -16,6 +16,14 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [invited, setInvited] = useState(false);
+
+  // Invite links arrive as /signup?invite=<token>&email=<address>.
+  useEffect(() => {
+    const q = new URLSearchParams(location.search);
+    if (q.get("email")) setEmail(q.get("email")!);
+    if (q.get("invite")) setInvited(true);
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -41,8 +49,8 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   return (
     <Gate need="anon">
       <div className="w-full max-w-[400px] card p-6 sm:p-8 rise" style={{ boxShadow: "0 1px 2px rgba(8,9,10,.04)" }}>
-        <p className="text-faint mb-1.5">{mode === "signup" ? "Start a 14-day trial" : "Welcome back"}</p>
-        <h1 className="h2 mb-6">{mode === "signup" ? "Create your agency workspace" : "Log in to Partner AEO"}</h1>
+        <p className="text-faint mb-1.5">{mode === "signup" ? (invited ? "You've been invited" : "Start a 14-day trial") : "Welcome back"}</p>
+        <h1 className="h2 mb-6">{mode === "signup" ? (invited ? "Join your team on Partner AEO" : "Create your agency workspace") : "Log in to Partner AEO"}</h1>
         {notice ? (
           <p className="text-body" role="status">{notice}</p>
         ) : (
@@ -53,14 +61,14 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
               </Field>
             )}
             <Field label="Work email" htmlFor="email">
-              <input id="email" type="email" required className="input" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="alex@agency.com" />
+              <input id="email" type="email" required className="input" autoComplete="email" value={email} readOnly={invited && mode === "signup"} onChange={(e) => setEmail(e.target.value)} placeholder="alex@agency.com" />
             </Field>
-            <Field label="Password" htmlFor="password" hint={mode === "signup" ? "At least 8 characters." : undefined}>
+            <Field label="Password" htmlFor="password" hint={mode === "signup" ? "At least 8 characters." : <Link href="/forgot" className="text-muted hover:text-ink">Forgot password?</Link>}>
               <input id="password" type="password" required className="input" autoComplete={mode === "signup" ? "new-password" : "current-password"} value={password} onChange={(e) => setPassword(e.target.value)} />
             </Field>
             <p role="alert" className="field-error -mt-2">{error}</p>
             <Button type="submit" variant="primary" size="large" loading={busy} className="w-full">
-              {mode === "signup" ? "Create workspace" : "Log in"}
+              {mode === "signup" ? (invited ? "Join workspace" : "Create workspace") : "Log in"}
             </Button>
           </form>
         )}

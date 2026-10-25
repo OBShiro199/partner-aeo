@@ -1,7 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Trash } from "@phosphor-icons/react";
 import { useApp } from "@/lib/store";
+import { isDemo, repo } from "@/lib/repo";
+import type { EmailPrefs } from "@/lib/repo/types";
 import { normaliseDomain, faviconFor } from "@/lib/format";
 import { liveEngineIds } from "@/lib/engines";
 import type { Role } from "@/lib/types";
@@ -14,6 +16,7 @@ const SECTIONS = [
   { id: "markets", label: "Markets" },
   { id: "engines", label: "Answer engines" },
   { id: "team", label: "Team and seats" },
+  { id: "notifications", label: "Notifications" },
 ];
 
 export default function SettingsPage() {
@@ -93,7 +96,7 @@ export default function SettingsPage() {
                 e.preventDefault();
                 setInviteErr(null);
                 if (!/^\S+@\S+\.\S+$/.test(email)) return setInviteErr("Enter a valid email.");
-                try { await s.invite(email.trim(), role); setEmail(""); s.toast("Invite created"); } catch (err) { setInviteErr((err as Error).message); }
+                try { await s.invite(email.trim(), role); setEmail(""); s.toast(isDemo ? "Invite created" : `Invite emailed to ${email.trim()}`); } catch (err) { setInviteErr((err as Error).message); }
               }}>
                 <input className="input flex-1 min-w-[220px]" placeholder="teammate@agency.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email to invite" />
                 <div className="flex rounded-md border border-hairline p-0.5">
@@ -105,11 +108,46 @@ export default function SettingsPage() {
                 <p role="alert" className="field-error w-full">{inviteErr}</p>
               </form>
             )}
-            <p className="text-faint">Invite emails send once Resend is connected*. Until then, share the sign-up link and they join when they sign up with the invited email.</p>
+            <p className="text-faint">We email each person an invite link. When they sign up with that email, they join this workspace automatically.</p>
           </Section>
+
+          <Notifications />
         </div>
       </div>
     </>
+  );
+}
+
+function Notifications() {
+  const toast = useApp((s) => s.toast);
+  const [prefs, setPrefs] = useState<EmailPrefs | null>(null);
+  useEffect(() => { repo.emailPrefs().then(setPrefs).catch(() => setPrefs({ weekly_digest: true, alerts: true, product: true })); }, []);
+  const rows: { key: keyof EmailPrefs; title: string; body: string }[] = [
+    { key: "weekly_digest", title: "Weekly summary", body: "Monday morning: every client's visibility score, what changed and the most cited sources." },
+    { key: "alerts", title: "Visibility alerts", body: "When a client's score drops 10 or more points in a week." },
+    { key: "product", title: "Product news", body: "New engines and features, at most once a month." },
+  ];
+  async function toggle(key: keyof EmailPrefs) {
+    if (!prefs) return;
+    const next = { ...prefs, [key]: !prefs[key] };
+    setPrefs(next);
+    try { setPrefs(await repo.setEmailPrefs({ [key]: next[key] })); toast(next[key] ? "Email turned on" : "Email turned off"); }
+    catch (e) { setPrefs(prefs); toast((e as Error).message, { tone: "error" }); }
+  }
+  return (
+    <Section id="notifications" title="Notifications" sub="Emails to you. Invites, account and billing notices always send.">
+      <ul className="card divide-y divide-divider">
+        {rows.map((r) => (
+          <li key={r.key} className="min-h-14 py-3 px-4 flex items-center gap-4">
+            <span className="flex-1 min-w-0"><span className="block text-ink font-medium">{r.title}</span><span className="block text-faint">{r.body}</span></span>
+            <button role="switch" aria-checked={!!prefs?.[r.key]} aria-label={r.title} disabled={!prefs} onClick={() => toggle(r.key)}
+              className={cx("relative w-9 h-5 rounded-full border transition-colors flex-none", prefs?.[r.key] ? "bg-blue border-blue" : "bg-hover border-btn-edge")}>
+              <span className="absolute top-[1px] left-[1px] size-4 rounded-full bg-white shadow-sm transition-transform" style={{ transform: prefs?.[r.key] ? "translateX(16px)" : "none", transitionTimingFunction: "var(--ease-morph)" }} />
+            </button>
+          </li>
+        ))}
+      </ul>
+    </Section>
   );
 }
 

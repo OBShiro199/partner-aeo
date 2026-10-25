@@ -44,3 +44,6 @@ next-env.d.ts
 .dfs-usage.json
 .dfs-last-*.json
 !.env.example
+
+# rendered email previews
+/emails/preview/

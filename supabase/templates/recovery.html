@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light"><meta name="supported-color-schemes" content="light">
+<title>Partner AEO</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  @media (max-width:600px){ .card{border-radius:0!important;border-left:0!important;border-right:0!important} .pad{padding:24px 20px!important} .stack td{display:block!important;width:100%!important;border-right:0!important;border-bottom:1px solid #e6e6e9!important} }
+  a{color:#3d63bd}
+</style></head>
+<body style="margin:0;padding:0;background:#f5f5f6;-webkit-font-smoothing:antialiased;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#f5f5f6;">Someone asked to reset the password for you. Choose a new one with the button below. The link works once and expires in an hour.&#8199;&#65279;&#847;&#8199;&#65279;&#847;&#8199;&#65279;&#847;</div>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f5f5f6;">
+  <tr><td align="center" style="padding:32px 12px;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="560" class="card" style="width:100%;max-width:560px;background:#ffffff;border:1px solid #e6e6e9;border-radius:8px;">
+      <tr><td style="padding:18px 32px;border-bottom:1px solid #e6e6e9;" class="pad">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
+          <td style="font-family:Geist, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:14px;font-weight:500;color:#08090a;letter-spacing:-0.01em;">
+            <img src="https://partneraeo.com/email/mark.png" width="22" height="22" alt="" style="vertical-align:-6px;margin-right:8px;border:0;">Partner AEO
+          </td>
+          
+        </tr></table>
+      </td></tr>
+      <tr><td style="padding:32px;" class="pad"><p style="margin:0 0 8px;font-family:Geist, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:13px;line-height:18px;color:#3d63bd;font-weight:500;">
+     <span style="display:inline-block;width:7px;height:7px;border-radius:7px;background:#5f86e0;margin-right:7px;vertical-align:1px;"></span>Password reset</p><h1 style="margin:0 0 16px;font-family:Geist, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:24px;line-height:30px;font-weight:500;color:#08090a;letter-spacing:-0.03em;">Reset your password</h1><p style="margin:0 0 16px;font-family:Geist, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:15px;line-height:24px;color:#3c4149;">Someone asked to reset the password for {{ .Email }}. Choose a new one with the button below. The link works once and expires in an hour.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 24px;">
+  <tr><td style="border:1px solid #9da1a8;border-radius:6px;background:#ffffff;">
+    <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:11px 18px;font-family:Geist, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:14px;font-weight:500;color:#08090a;text-decoration:none;letter-spacing:-0.01em;">Choose a new password&nbsp;&rarr;</a>
+  </td></tr>
+</table>
+      <p style="margin:0 0 16px;font-family:Geist, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:15px;line-height:24px;color:#3c4149;"><span style="font-size:13px;color:#8a8f98;">Button not working? Paste this link into your browser:<br><a href="{{ .ConfirmationURL }}" style="color:#3d63bd;word-break:break-all;">{{ .ConfirmationURL }}</a></span></p></td></tr>
+      <tr><td style="padding:20px 32px;border-top:1px solid #e6e6e9;font-family:Geist, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:12px;line-height:18px;color:#8a8f98;" class="pad">
+        If you didn&#39;t ask for this, ignore this email and your password stays the same.
+        
+        <br>Partner AEO
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>

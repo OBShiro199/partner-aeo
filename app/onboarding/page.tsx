@@ -334,6 +334,7 @@ function StepLaunch({ d, meta }: { d: Draft; meta: { domain: string; favicon_url
         await Promise.all([worker(), worker(), worker()]);
         await st.addClients(inputs);
         await st.updateAgency({ onboarded_at: new Date().toISOString() });
+        repo.flushEmail(); // welcome email goes out now, not in a minute
         sessionStorage.removeItem(DRAFT_KEY);
         await useApp.getState().refresh();
         setPhase("done");

@@ -43,7 +43,10 @@ export const supabaseRepo: Repo = {
     return () => data.subscription.unsubscribe();
   },
   async signUp(email, password, fullName) {
-    const { data, error } = await db().auth.signUp({ email, password, options: { data: { full_name: fullName } } });
+    const { data, error } = await db().auth.signUp({
+      email, password,
+      options: { data: { full_name: fullName }, emailRedirectTo: `${location.origin}/onboarding` },
+    });
     fail(error);
     return { needsConfirmation: !data.session };
   },
@@ -51,6 +54,31 @@ export const supabaseRepo: Repo = {
     const { error } = await db().auth.signInWithPassword({ email, password });
     if (error) throw new Error(error.message === "Invalid login credentials" ? "That email and password don't match." : error.message);
   },
+  async sendPasswordReset(email) {
+    const { error } = await db().auth.resetPasswordForEmail(email, { redirectTo: `${location.origin}/reset` });
+    fail(error);
+  },
+  async updatePassword(password) {
+    const { error } = await db().auth.updateUser({ password });
+    fail(error);
+  },
+  async emailPrefs() {
+    const { data: s } = await db().auth.getSession();
+    const { data, error } = await db().from("email_preferences").select("weekly_digest, alerts, product").eq("user_id", s.session!.user.id).maybeSingle();
+    fail(error);
+    return data ?? { weekly_digest: true, alerts: true, product: true };
+  },
+  async setEmailPrefs(patch) {
+    const { data: s } = await db().auth.getSession();
+    const { data, error } = await db().from("email_preferences").update({ ...patch, updated_at: new Date().toISOString() })
+      .eq("user_id", s.session!.user.id).select("weekly_digest, alerts, product").single();
+    fail(error);
+    return data;
+  },
+  flushEmail() {
+    db().functions.invoke("email-worker", { body: {} }).catch(() => {});
+  },
+
   async signOut() {
     await db().auth.signOut();
   },

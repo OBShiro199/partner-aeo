@@ -30,5 +30,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "supabase/functions/*/index.ts", "supabase/functions/_shared/common.ts", "supabase/functions/_shared/dataforseo.ts"]
+  "exclude": ["node_modules", "supabase/functions/*/index.ts", "supabase/functions/_shared/common.ts", "supabase/functions/_shared/dataforseo.ts", "supabase/functions/_shared/digest.ts", "scripts/email-preview.ts"]
 }
