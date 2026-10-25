@@ -1,14 +1,18 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { SquaresFour, UsersThree, CreditCard, GearSix, Plus, CaretUpDown, SignOut, Flask } from "@phosphor-icons/react";
+import { SquaresFour, UsersThree, CreditCard, GearSix, Plus, CaretUpDown, SignOut, Flask, Tray, Strategy, Code } from "@phosphor-icons/react";
 import { useApp } from "@/lib/store";
+import { useGrowth } from "@/lib/growth";
 import { isDemo } from "@/lib/repo";
 import { cx, Favicon, Menu } from "../ui";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", Icon: SquaresFour, tour: "nav-dashboard" },
   { href: "/clients", label: "Clients", Icon: UsersThree, tour: "nav-clients" },
+  { href: "/leads", label: "Leads", Icon: Tray, tour: "nav-leads" },
+  { href: "/strategy", label: "Strategy Engine", Icon: Strategy, tour: "nav-strategy" },
+  { href: "/widget", label: "Lead widget", Icon: Code, tour: "nav-widget" },
   { href: "/lab", label: "API lab", Icon: Flask, tour: "nav-lab" },
   { href: "/billing", label: "Billing", Icon: CreditCard, tour: "nav-billing" },
   { href: "/settings", label: "Settings", Icon: GearSix, tour: "nav-settings" },
@@ -24,6 +28,7 @@ export function Sidebar() {
   const setFilterClient = useApp((s) => s.setFilterClient);
   const openAdd = useApp((s) => s.setAddClientOpen);
   const signOut = useApp((s) => s.signOut);
+  const newLeads = useGrowth((g) => g.leads.filter((l) => l.status === "new").length);
 
   return (
     <aside className="sticky top-0 h-dvh w-[56px] min-[1100px]:w-[240px] flex-none hair-r bg-surface flex flex-col z-[90]">
@@ -83,6 +88,7 @@ export function Sidebar() {
             >
               <Icon size={17} weight={active ? "duotone" : "regular"} color={active ? "var(--blue)" : undefined} />
               <span className="hidden min-[1100px]:inline">{label}</span>
+              {href === "/leads" && newLeads > 0 && <span className="hidden min-[1100px]:inline ml-auto tag tag-blue tnum h-5 px-1.5">{newLeads}</span>}
             </Link>
           );
         })}

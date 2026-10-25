@@ -1,5 +1,5 @@
 import { createClient, FunctionsHttpError, type SupabaseClient } from "@supabase/supabase-js";
-import type { Agency, Client, Competitor, Invite, Member, Prompt, Result, Role, User } from "../types";
+import type { Agency, Audit, Client, Competitor, Credits, Invite, Lead, Member, Prompt, Result, Role, User, Widget } from "../types";
 import type { Repo } from "./types";
 
 let sb: SupabaseClient | null = null;
@@ -211,5 +211,66 @@ export const supabaseRepo: Repo = {
   async removeMember(agencyId, userId) {
     const { error } = await db().from("agency_members").delete().eq("agency_id", agencyId).eq("user_id", userId);
     fail(error);
+  },
+
+  async widget(agencyId) {
+    const { data, error } = await db().from("widgets").select("*").eq("agency_id", agencyId).maybeSingle();
+    fail(error);
+    return data as Widget | null;
+  },
+  async saveWidget(agencyId, patch) {
+    const EDITABLE = ["enabled", "headline", "subhead", "brand_color", "logo_url", "sender_name", "contact_name", "contact_email", "contact_phone", "booking_url", "allowed_hosts", "default_region"] as const;
+    const rest = Object.fromEntries(EDITABLE.filter((k) => k in patch).map((k) => [k, patch[k]]));
+    const { data, error } = await db().from("widgets")
+      .upsert({ agency_id: agencyId, ...rest, updated_at: new Date().toISOString() }, { onConflict: "agency_id" })
+      .select("*").single();
+    fail(error);
+    return data as Widget;
+  },
+  async credits(agencyId) {
+    const { data, error } = await db().rpc("credit_summary", { p_agency: agencyId });
+    fail(error);
+    return data as Credits | null;
+  },
+  async audits(agencyId) {
+    // The list doesn't need the raw answers; they can run to hundreds of KB.
+    const { data, error } = await db().from("audits")
+      .select("id, agency_id, widget_id, source, depth, prospect_domain, prospect_name, keyword, competitor_domain, competitor_name, region, status, stage, score, risk, deflection_rate, cost_usd, error, cached_from, host, created_at, finished_at")
+      .eq("agency_id", agencyId).order("created_at", { ascending: false }).limit(200);
+    fail(error);
+    return (data ?? []).map((a) => ({ ...a, report: {}, hub: {}, assets: {} })) as Audit[];
+  },
+  async audit(id) {
+    const { data, error } = await db().from("audits").select("*").eq("id", id).maybeSingle();
+    fail(error);
+    return data as Audit | null;
+  },
+  async runStrategy(agencyId, input) {
+    return call<{ audit_id: string; overage?: boolean }>("strategy-run", { agency_id: agencyId, ...input });
+  },
+  async retryStrategy(agencyId, auditId) {
+    await call("strategy-run", { agency_id: agencyId, audit_id: auditId });
+  },
+  async deleteAudit(id) {
+    const { error } = await db().from("audits").delete().eq("id", id);
+    fail(error);
+  },
+  async leads(agencyId) {
+    const { data, error } = await db().from("leads").select("*").eq("agency_id", agencyId).order("created_at", { ascending: false }).limit(500);
+    fail(error);
+    return (data ?? []) as Lead[];
+  },
+  async updateLead(id, patch) {
+    const { error } = await db().from("leads").update(patch).eq("id", id);
+    fail(error);
+  },
+  watchGrowth(agencyId, cb) {
+    const ch = db().channel(`growth:${agencyId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "audits", filter: `agency_id=eq.${agencyId}` },
+        (p) => p.new && "id" in p.new && cb({ table: "audits", row: p.new as Audit }))
+      .on("postgres_changes", { event: "*", schema: "public", table: "leads", filter: `agency_id=eq.${agencyId}` },
+        (p) => p.new && "id" in p.new && cb({ table: "leads", row: p.new as Lead }))
+      .subscribe();
+    return () => { db().removeChannel(ch); };
   },
 };

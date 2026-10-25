@@ -356,4 +356,19 @@ export const demoRepo: Repo = {
     d.members = d.members.filter((m) => !(m.agency_id === agencyId && m.user_id === userId));
     save(d);
   },
+
+  // Growth tools call paid APIs from edge functions, so demo mode shows them empty.
+  async widget() { return null; },
+  async saveWidget() { throw new Error(NEEDS_SUPABASE); },
+  async credits() { return null; },
+  async audits() { return []; },
+  async audit() { return null; },
+  async runStrategy() { throw new Error(NEEDS_SUPABASE); },
+  async retryStrategy() { throw new Error(NEEDS_SUPABASE); },
+  async deleteAudit() {},
+  async leads() { return []; },
+  async updateLead() {},
+  watchGrowth() { return () => {}; },
 };
+
+const NEEDS_SUPABASE = "The widget and Strategy Engine need the live backend. Turn off demo mode to use them.";

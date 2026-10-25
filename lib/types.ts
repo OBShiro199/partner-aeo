@@ -1,3 +1,4 @@
+import type { Hub, ProspectReport, SalesKit } from "../supabase/functions/_shared/audit.ts";
 export type Role = "owner" | "admin" | "member";
 export type Intent = "best_for" | "problem" | "comparison" | "local" | "other";
 export type ResultStatus = "pending" | "done" | "failed" | "skipped";
@@ -110,3 +111,71 @@ export type NewClientInput = {
   competitors: { name: string; domain: string | null }[];
   prompts: { text: string; intent: Intent; source: Prompt["source"] }[];
 };
+
+// ---------------------------------------------------------------------------
+// Growth: widget, audits (Strategy Engine), leads, credits
+// ---------------------------------------------------------------------------
+export type { Hub, ProspectReport, SalesKit };
+
+export type Widget = {
+  id: string;
+  agency_id: string;
+  public_key: string;
+  enabled: boolean;
+  headline: string;
+  subhead: string;
+  brand_color: string;
+  logo_url: string | null;
+  sender_name: string | null;
+  contact_name: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  booking_url: string | null;
+  allowed_hosts: string[];
+  default_region: string;
+};
+
+export type Audit = {
+  id: string;
+  agency_id: string;
+  widget_id: string | null;
+  source: "widget" | "manual";
+  depth: "lite" | "full";
+  prospect_domain: string;
+  prospect_name: string | null;
+  keyword: string;
+  competitor_domain: string | null;
+  competitor_name: string | null;
+  region: string;
+  status: "queued" | "running" | "complete" | "failed";
+  stage: string | null;
+  score: number | null;
+  risk: "high" | "at_risk" | "visible" | null;
+  deflection_rate: number | null;
+  report: ProspectReport | Record<string, never>;
+  hub: Hub;
+  assets: SalesKit;
+  cost_usd: number;
+  error: string | null;
+  cached_from: string | null;
+  host: string | null;
+  created_at: string;
+  finished_at: string | null;
+};
+
+export type LeadStatus = "new" | "contacted" | "meeting" | "won" | "lost";
+export type Lead = {
+  id: string;
+  agency_id: string;
+  audit_id: string;
+  name: string | null;
+  email: string;
+  phone: string;
+  status: LeadStatus;
+  notes: string | null;
+  report_sent_at: string | null;
+  created_at: string;
+};
+
+export type CreditMeter = { used: number; allowance: number; overage_usd: number; overage_count: number };
+export type Credits = { plan: string; overage_enabled: boolean; widget_scans: CreditMeter; strategy_runs: CreditMeter; resets_at: string };

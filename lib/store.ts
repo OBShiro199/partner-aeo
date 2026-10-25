@@ -1,6 +1,7 @@
 "use client";
 import { create } from "zustand";
 import { repo } from "./repo";
+import { useGrowth } from "./growth";
 import type { NewAgencyInput } from "./repo/types";
 import type { Agency, Client, Competitor, DfsStatus, Intent, Invite, Member, NewClientInput, Prompt, Result, Role, User } from "./types";
 
@@ -105,6 +106,7 @@ export const useApp = create<State>((set, get) => ({
   async signOut() {
     await repo.signOut();
     booted = null;
+    useGrowth.getState().reset();
     set({ status: "anon", user: null, agency: null, clients: [], prompts: [], results: [], competitors: [], filterClient: null });
   },
 

@@ -1,5 +1,5 @@
 import type {
-  Agency, Client, Competitor, DfsStatus, Intent, Invite, NewClientInput, Prompt, Result, Role, SiteMeta, UsageRow, User, Workspace,
+  Agency, Audit, Client, Competitor, Credits, DfsStatus, Intent, Invite, Lead, NewClientInput, Prompt, Result, Role, SiteMeta, UsageRow, User, Widget, Workspace,
 } from "../types";
 
 export type EmailPrefs = { weekly_digest: boolean; alerts: boolean; product: boolean };
@@ -17,6 +17,8 @@ export type NewAgencyInput = {
 export type GeneratedPrompts = { prompts: { text: string; intent: Intent }[]; source: "haiku" | "template"; category?: string | null };
 
 export type CheckResponse = { result: Result; usage: { calls_used: number; calls_max: number | null; spent_usd: number } };
+
+export type StrategyInput = { prospect_domain: string; keyword: string; competitor_domain: string | null; region: string };
 
 export interface Repo {
   mode: "demo" | "supabase";
@@ -55,4 +57,18 @@ export interface Repo {
   invite(agencyId: string, email: string, role: Role): Promise<Invite>;
   revokeInvite(id: string): Promise<void>;
   removeMember(agencyId: string, userId: string): Promise<void>;
+
+  // Growth: widget, Strategy Engine audits, leads
+  widget(agencyId: string): Promise<Widget | null>;
+  saveWidget(agencyId: string, patch: Partial<Widget>): Promise<Widget>;
+  credits(agencyId: string): Promise<Credits | null>;
+  audits(agencyId: string): Promise<Audit[]>;
+  audit(id: string): Promise<Audit | null>;
+  runStrategy(agencyId: string, input: StrategyInput): Promise<{ audit_id: string; overage?: boolean }>;
+  retryStrategy(agencyId: string, auditId: string): Promise<void>;
+  deleteAudit(id: string): Promise<void>;
+  leads(agencyId: string): Promise<Lead[]>;
+  updateLead(id: string, patch: Partial<Pick<Lead, "status" | "notes">>): Promise<void>;
+  // Live updates for audits and leads in this agency. Returns an unsubscribe function.
+  watchGrowth(agencyId: string, cb: (e: { table: "audits"; row: Audit } | { table: "leads"; row: Lead }) => void): () => void;
 }

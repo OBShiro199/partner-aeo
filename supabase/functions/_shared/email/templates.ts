@@ -286,3 +286,92 @@ export function authTemplate(kind: keyof typeof AUTH_TEMPLATES, appUrl: string):
   });
   return { subject: t.subject, html };
 }
+
+// ---------------------------------------------------------------------------
+// Growth: the white-label prospect email and the agency's new-lead alert
+// ---------------------------------------------------------------------------
+
+// Sent on the agency's behalf. Agency branding only: no Partner AEO mark or footer.
+export function prospectReport(d: {
+  agency_name: string; brand_color: string; logo_url?: string | null; first_name?: string | null;
+  prospect_name: string; prospect_domain: string; keyword: string; score: number; risk_label: string;
+  deflection_pct: number | null; competitor_name?: string | null; invisible: number; asked: number;
+  contact_name?: string | null; contact_email?: string | null; contact_phone?: string | null; booking_url?: string | null;
+  host?: string | null;
+}): Rendered {
+  const brand = /^#[0-9a-f]{6}$/i.test(d.brand_color) ? d.brand_color : C.blue;
+  const subject = `Your AI search report: ${d.prospect_name} scored ${d.score}/100`;
+  const preheader = `How ChatGPT, Perplexity, Gemini and Claude answer questions about ${d.keyword}. Full report attached.`;
+  const statRow = stats([
+    { label: "AI Search Score", value: `${d.score}/100` },
+    { label: "Deflection rate", value: d.deflection_pct == null ? "-" : `${d.deflection_pct}%` },
+    { label: "Questions missed", value: `${d.invisible} of ${d.asked}` },
+  ]);
+  const contact = [d.contact_name, d.contact_email, d.contact_phone].filter(Boolean).map((s) => esc(s)).join(" · ");
+  const body = `
+    ${p(`Hi${d.first_name ? ` ${esc(d.first_name)}` : ""},`)}
+    ${p(`Here is your AI search visibility report for <b style="color:${C.ink};font-weight:500;">${esc(d.prospect_domain)}</b>. We asked the leading AI assistants what buyers ask about <i>${esc(d.keyword)}</i> and recorded who they recommended.`)}
+    ${statRow}
+    ${p(d.deflection_pct != null && d.competitor_name
+      ? `In ${d.deflection_pct}% of answers, ${esc(d.competitor_name)} was recommended and ${esc(d.prospect_name)} wasn't mentioned. The attached 3-page PDF shows the questions, the engines and the sources they cite.`
+      : `The attached 3-page PDF shows the questions, the engines and the sources they cite.`)}
+    ${d.booking_url ? `
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 24px;">
+  <tr><td style="border:1px solid ${brand};border-radius:6px;background:${C.surface};">
+    <a href="${esc(d.booking_url)}" style="display:inline-block;padding:11px 18px;font-family:${FONT};font-size:14px;font-weight:500;color:${C.ink};text-decoration:none;">Book a 15-minute walkthrough&nbsp;&rarr;</a>
+  </td></tr>
+</table>` : ""}
+    ${p(`Reply to this email with any questions.${contact ? `<br><span style="color:${C.muted};">${contact}</span>` : ""}`)}`;
+
+  const html = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light"><title>${esc(d.agency_name)}</title>
+<style>@media (max-width:600px){ .card{border-radius:0!important;border-left:0!important;border-right:0!important} .pad{padding:24px 20px!important} }</style></head>
+<body style="margin:0;padding:0;background:${C.bg};-webkit-font-smoothing:antialiased;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:${C.bg};">${esc(preheader)}&#8199;&#65279;&#847;&#8199;&#65279;&#847;</div>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:${C.bg};">
+  <tr><td align="center" style="padding:32px 12px;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="560" class="card" style="width:100%;max-width:560px;background:${C.surface};border:1px solid ${C.hairline};border-top:3px solid ${brand};border-radius:8px;">
+      <tr><td style="padding:18px 32px;border-bottom:1px solid ${C.hairline};font-family:${FONT};font-size:14px;font-weight:500;color:${C.ink};" class="pad">
+        ${d.logo_url ? `<img src="${esc(d.logo_url)}" width="22" height="22" alt="" style="vertical-align:-6px;margin-right:8px;border:0;border-radius:4px;">` : ""}${esc(d.agency_name)}
+      </td></tr>
+      <tr><td style="padding:32px;" class="pad">${body}</td></tr>
+      <tr><td style="padding:20px 32px;border-top:1px solid ${C.hairline};font-family:${FONT};font-size:12px;line-height:18px;color:${C.faint};" class="pad">
+        You're getting this because you requested an AI search report${d.host ? ` on ${esc(d.host)}` : ""}. Sent by ${esc(d.agency_name)}.
+      </td></tr>
+    </table>
+  </td></tr>
+</table></body></html>`;
+  const text = `Hi${d.first_name ? ` ${d.first_name}` : ""},\n\nHere is your AI search visibility report for ${d.prospect_domain} (${d.keyword}).\n\n` +
+    `AI Search Score: ${d.score}/100 (${d.risk_label})\nDeflection rate: ${d.deflection_pct == null ? "-" : `${d.deflection_pct}%`}\nQuestions missed: ${d.invisible} of ${d.asked}\n\n` +
+    `The full 3-page report is attached as a PDF.${d.booking_url ? `\n\nBook a walkthrough: ${d.booking_url}` : ""}\n\n` +
+    `${[d.contact_name, d.contact_email, d.contact_phone].filter(Boolean).join(" · ")}\n${d.agency_name}\n\n--\nYou requested this report${d.host ? ` on ${d.host}` : ""}.`;
+  return { subject, preheader, html, text };
+}
+
+export function newLead(ctx: Ctx, d: {
+  lead_id: string; name?: string | null; email: string; phone: string; prospect_domain: string; keyword: string;
+  score: number; competitor_name?: string | null; deflection_pct: number | null; host?: string | null;
+}): Rendered {
+  const who = d.name ? `${d.name} (${d.prospect_domain})` : d.prospect_domain;
+  const subject = `New lead: ${d.prospect_domain} scored ${d.score}/100`;
+  const preheader = `${who} unlocked their AI search report from your widget.`;
+  const url = `${ctx.appUrl}/leads/${d.lead_id}`;
+  const body = `
+    ${eyebrow("New lead from your widget")}
+    ${h1(`${d.prospect_domain} scored ${d.score}/100`)}
+    ${p(`${esc(who)} ran a scan for <i>${esc(d.keyword)}</i>${d.host ? ` on ${esc(d.host)}` : ""} and unlocked the full report. We've emailed them the PDF under your brand.`)}
+    ${stats([
+      { label: "AI Search Score", value: `${d.score}/100` },
+      { label: d.competitor_name ? `Lost to ${d.competitor_name}` : "Deflection", value: d.deflection_pct == null ? "-" : `${d.deflection_pct}%` },
+    ])}
+    ${p(`<b style="color:${C.ink};font-weight:500;">Contact</b><br>${esc(d.email)}<br>${esc(d.phone)}`)}
+    ${p("Your strategy pack is being written now: 25 prompt variations with search volumes, the sources to target, a cold email, a 2-minute talk track and a closing deck.")}
+    ${button("Open the lead", url)}`;
+  const reason = "You're getting this because you're an owner or admin of this agency on Partner AEO.";
+  return {
+    subject, preheader,
+    html: layout({ preheader, body, ctx, reason }),
+    text: `New lead from your widget\n\n${who} scored ${d.score}/100 for "${d.keyword}".\nEmail: ${d.email}\nPhone: ${d.phone}\n\nOpen the lead: ${url}${footerText(ctx, reason)}`,
+  };
+}
