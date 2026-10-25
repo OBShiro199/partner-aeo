@@ -235,7 +235,7 @@ export const supabaseRepo: Repo = {
   async audits(agencyId) {
     // The list doesn't need the raw answers; they can run to hundreds of KB.
     const { data, error } = await db().from("audits")
-      .select("id, agency_id, widget_id, source, depth, prospect_domain, prospect_name, keyword, competitor_domain, competitor_name, region, status, stage, score, risk, deflection_rate, cost_usd, error, cached_from, host, created_at, finished_at")
+      .select("id, agency_id, widget_id, source, depth, prospect_domain, prospect_name, keyword, competitor_domain, competitor_name, region, status, stage, score, risk, deflection_rate, cost_usd, error, cached_from, host, created_at, started_at, finished_at")
       .eq("agency_id", agencyId).order("created_at", { ascending: false }).limit(200);
     fail(error);
     return (data ?? []).map((a) => ({ ...a, report: {}, hub: {}, assets: {} })) as Audit[];

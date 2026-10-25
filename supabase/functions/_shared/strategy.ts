@@ -254,7 +254,7 @@ export async function runAudit(db: SupabaseClient, auditId: string, depth: "lite
   const loc = LOCATION_CODES[a.region] ?? 2840;
 
   try {
-    await stage(`Reading ${a.prospect_domain}`);
+    await db.from("audits").update({ status: "running", stage: `Reading ${a.prospect_domain}`, started_at: new Date().toISOString(), error: null }).eq("id", auditId);
     const [p, c] = await Promise.all([
       siteBrand(a.prospect_domain, a.prospect_name),
       a.competitor_domain ? siteBrand(a.competitor_domain, a.competitor_name) : Promise.resolve(null),

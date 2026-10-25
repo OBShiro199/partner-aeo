@@ -246,3 +246,6 @@ grant execute on function public.enqueue_email(text, text, uuid, uuid, jsonb, te
 
 -- Live progress in the dashboard.
 alter publication supabase_realtime add table public.audits, public.leads;
+
+-- When the current run began (an audit can run twice: lite, then the full upgrade).
+alter table public.audits add column started_at timestamptz not null default now();

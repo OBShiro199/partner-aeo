@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { ArrowRight, Check, EnvelopeSimple, LockSimple, Warning } from "@phosphor-icons/react";
 import { EngineLogo } from "@/lib/engines";
+import { RISK_LABEL, type Risk } from "@/supabase/functions/_shared/audit.ts";
 import { normaliseDomain } from "@/lib/format";
 import { ScoreGauge } from "@/components/growth/ScoreGauge";
 import { Button, Field } from "@/components/ui";
@@ -118,7 +119,7 @@ export default function EmbedPage() {
   }
 
   return (
-    <div ref={root} className="bg-surface text-body" style={{ ["--wb" as string]: color }}>
+    <div ref={root} className="bg-surface text-body max-w-[640px] mx-auto" style={{ ["--wb" as string]: color }}>
       <div className="relative overflow-hidden border border-hairline rounded-[8px] m-px" style={{ borderTop: `3px solid ${color}` }}>
         <div className="absolute inset-0 grid-bg grid-fade opacity-60 pointer-events-none" aria-hidden />
         <div className="relative p-5 sm:p-7">
@@ -171,17 +172,18 @@ export default function EmbedPage() {
             <div className="step-in">
               <div className="flex flex-col items-center text-center">
                 <ScoreGauge value={teaser.score} color={color} size={220} />
-                <span className={teaser.risk === "visible" ? "tag tag-green mt-3" : teaser.risk === "at_risk" ? "tag tag-amber mt-3" : "tag tag-red mt-3"}>{teaser.risk_label}</span>
+                <span className={teaser.risk === "visible" ? "tag tag-green mt-3" : teaser.risk === "at_risk" ? "tag tag-amber mt-3" : "tag tag-red mt-3"}>{RISK_LABEL[teaser.risk as Risk] ?? teaser.risk_label}</span>
                 {teaser.deflection_rate != null && teaser.competitor && (
                   <p className="text-ink mt-4 max-w-[400px]">
-                    <span className="font-medium tnum" style={{ color: teaser.deflection_rate > 0.3 ? "var(--danger-ink)" : undefined }}>{Math.round(teaser.deflection_rate * 100)}%</span> of AI answers recommended <b className="font-medium">{teaser.competitor.name}</b> and didn&apos;t mention you.
+                    <span className="font-medium tnum" style={{ color: teaser.deflection_rate > 0.3 ? "var(--danger-ink)" : undefined }}>{Math.round(teaser.deflection_rate * 100)}%</span> of AI answers for your service steered buyers to <b className="font-medium">{teaser.competitor.name}</b> without mentioning you.
                   </p>
                 )}
                 <p className="text-faint mt-1">{teaser.answers} answers from {teaser.engines.length} AI engines · invisible in {teaser.invisible} of {teaser.asked} buyer questions</p>
               </div>
 
               <div className="mt-6 card p-4 sm:p-5 relative overflow-hidden">
-                <div className="flex items-center gap-2 mb-3"><LockSimple size={15} style={{ color }} /><p className="text-ink font-medium">Get the full 3-page report</p></div>
+                <div className="flex items-center gap-2 mb-3"><LockSimple size={15} style={{ color }} /><p className="text-ink font-medium">Your 3-page Executive Diagnostic Assessment is ready</p></div>
+                <p className="text-muted mb-3">Enter your business email and phone number to unlock the full report and see your missing citation paths.</p>
                 <ul className="grid gap-1.5 mb-4 text-muted">
                   <li className="flex gap-2"><Check size={14} className="mt-0.5 flex-none" style={{ color }} /> Share of voice vs {teaser.competitor?.name ?? "your competitor"} on each engine</li>
                   <li className="flex gap-2"><Check size={14} className="mt-0.5 flex-none" style={{ color }} /> The buyer questions where you&apos;re invisible</li>
@@ -195,7 +197,7 @@ export default function EmbedPage() {
                   <input className="input" placeholder="Work email" autoComplete="email" type="email" aria-label="Email" value={lead.email} onChange={(e) => setLead({ ...lead, email: e.target.value })} />
                   {error && <p role="alert" className="field-error flex items-center gap-1.5"><Warning size={13} /> {error}</p>}
                   <Button type="submit" size="large" loading={busy} className="w-full" style={{ borderColor: color }}>
-                    <EnvelopeSimple size={15} style={{ color }} /> Email me the report
+                    <EnvelopeSimple size={15} style={{ color }} /> Unlock the full report
                   </Button>
                   <p className="text-faint t-12">{cfg.agency_name} will email the report and may contact you about it.</p>
                 </form>

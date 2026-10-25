@@ -13,11 +13,11 @@ Deno.serve(handle(async (req) => {
   await requireMember(db, agencyId, user.id);
 
   if (body.audit_id) {
-    const { data: a } = await db.from("audits").select("id, status, created_at").eq("id", body.audit_id).eq("agency_id", agencyId).maybeSingle();
+    const { data: a } = await db.from("audits").select("id, status, started_at").eq("id", body.audit_id).eq("agency_id", agencyId).maybeSingle();
     if (!a) throw new HttpError(404, "That analysis no longer exists.");
-    const stuck = a.status === "running" && Date.now() - new Date(a.created_at).getTime() > 300_000;
+    const stuck = Date.now() - new Date(a.started_at).getTime() > 300_000;
     if ((a.status === "running" || a.status === "queued") && !stuck) throw new HttpError(409, "That analysis is already running.");
-    await db.from("audits").update({ status: "running", stage: "Starting", error: null }).eq("id", a.id);
+    await db.from("audits").update({ status: "queued", stage: "Starting", error: null, started_at: new Date().toISOString() }).eq("id", a.id);
     background(runAudit(db, a.id, "full"));
     return json({ audit_id: a.id });
   }

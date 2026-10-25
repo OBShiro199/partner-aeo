@@ -40,7 +40,7 @@ function hex(c: string): [number, number, number] {
 export async function renderReportPdf(lib: PdfLib, r: ProspectReport, b: Branding): Promise<Uint8Array> {
   const { PDFDocument, StandardFonts, rgb } = lib;
   const doc = await PDFDocument.create();
-  doc.setTitle(pdfSafe(`AI Search Visibility Report: ${r.prospect.name}`));
+  doc.setTitle(pdfSafe(`Executive Diagnostic Assessment: ${r.prospect.name}`));
   doc.setAuthor(pdfSafe(b.agency_name));
   doc.setCreator(pdfSafe(b.agency_name));
   doc.setProducer(pdfSafe(b.agency_name));
@@ -116,7 +116,7 @@ export async function renderReportPdf(lib: PdfLib, r: ProspectReport, b: Brandin
       x += 30;
     }
     text(pg, b.agency_name, x, H - 45, { size: 11, f: bold, c: INK });
-    const label = "AI Search Visibility Report";
+    const label = "Executive Diagnostic Assessment";
     text(pg, label, W - M - font.widthOfTextAtSize(label, 9), H - 44, { size: 9, c: FAINT });
     rule(pg, H - 64);
     // Footer
@@ -203,7 +203,7 @@ export async function renderReportPdf(lib: PdfLib, r: ProspectReport, b: Brandin
     const list = r.prompts.slice(0, 5);
     for (const p of list) {
       const lines = wrap(`"${p.text}"`, W - 2 * M - 40, 12.5, bold).slice(0, 3);
-      const h = 54 + lines.length * 17;
+      const h = 54 + lines.length * 17 + (p.prospect_seen ? 0 : 16);
       pg.drawRectangle({ x: M, y: y - h, width: W - 2 * M, height: h, borderColor: col(HAIR), borderWidth: 0.8 });
       pg.drawRectangle({ x: M, y: y - h, width: 3, height: h, color: col(p.prospect_seen ? GREEN : RED) });
       let ly = y - 26;
@@ -212,6 +212,7 @@ export async function renderReportPdf(lib: PdfLib, r: ProspectReport, b: Brandin
       px += pill(pg, p.prospect_seen ? "YOU WERE MENTIONED" : "YOU ARE INVISIBLE", px, ly - 6, p.prospect_seen ? GREEN : RED) + 8;
       if (r.competitor) px += pill(pg, p.competitor_seen ? `${pdfSafe(comp).toUpperCase().slice(0, 24)} WAS RECOMMENDED` : `${pdfSafe(comp).toUpperCase().slice(0, 24)} NOT NAMED`, px, ly - 6, p.competitor_seen ? MUTED : FAINT) + 8;
       text(pg, `Asked on ${p.engines.map((e) => ENGINE_LABEL[e] ?? e).join(", ")}`, px + 4, ly - 4, { size: 8.5, c: FAINT });
+      if (!p.prospect_seen) text(pg, `Result: ${r.prospect.name} was not named in ${p.engines.length === 1 ? "this model's answer" : `any of the ${p.engines.length} models' answers`}.`, M + 20, ly - 24, { size: 9, f: bold, c: RED });
       y -= h + 12;
     }
     const invisible = list.filter((p) => !p.prospect_seen).length;

@@ -1,13 +1,16 @@
 "use client";
 import { useState } from "react";
-import { ArrowClockwise, Check, Copy, FilePdf, PresentationChart, Sparkle, Warning } from "@phosphor-icons/react";
+import Link from "next/link";
+import { ArrowClockwise, Check, Copy, FilePdf, PresentationChart, Sparkle, UserPlus, Warning } from "@phosphor-icons/react";
 import { ENGINE_LABEL, RISK_LABEL, type ProspectReport } from "@/supabase/functions/_shared/audit.ts";
 import { brandVariants } from "@/supabase/functions/_shared/analyse";
 import { EngineLogo } from "@/lib/engines";
 import { FlagIcon } from "@/lib/regions";
 import { INTENT_LABEL, INTENT_TAG, num, usd } from "@/lib/format";
 import { downloadDeck, downloadReportPdf } from "@/lib/sales-files";
-import type { Agency, Audit, Widget } from "@/lib/types";
+import type { Agency, Audit, Intent, Widget } from "@/lib/types";
+import { useApp } from "@/lib/store";
+import { faviconFor } from "@/lib/format";
 import { AnswerText } from "@/components/AnswerText";
 import { Button, cx, Favicon, LiveStatus, Sparkline } from "@/components/ui";
 import { ScoreGauge } from "./ScoreGauge";
@@ -18,7 +21,8 @@ type Tab = (typeof TABS)[number];
 const LITE_STAGES = ["Reading", "Writing buyer prompts", "Asking ChatGPT, Perplexity, Gemini and Claude"];
 const FULL_STAGES = [...LITE_STAGES, "Measuring AI search demand", "Reading how AI describes each brand", "Writing the sales kit"];
 
-export const isStuck = (a: Audit) => (a.status === "running" || a.status === "queued") && Date.now() - new Date(a.created_at).getTime() > 6 * 60_000 && !a.finished_at;
+// Edge functions stop after a few minutes; a run that hasn't finished by then never will.
+export const isStuck = (a: Audit) => (a.status === "running" || a.status === "queued") && Date.now() - new Date(a.started_at ?? a.created_at).getTime() > 6 * 60_000;
 
 export function RiskTag({ risk }: { risk: Audit["risk"] }) {
   if (!risk) return null;
@@ -56,6 +60,7 @@ export function AuditView({ audit, agency, widget, onRetry }: { audit: Audit; ag
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            <AddAsClient audit={audit} />
             <Button size="compact" disabled={!hasReport} loading={busy === "pdf"} onClick={() => act("pdf", () => downloadReportPdf(audit, brand))}>
               <FilePdf size={14} /> Prospect PDF
             </Button>
@@ -388,5 +393,28 @@ function AnswersTab({ audit }: { audit: Audit }) {
         ))}
       </ul>
     </Section>
+  );
+}
+
+// Won the deal: turn the prospect into a tracked client, seeded with the blueprint's prompts.
+function AddAsClient({ audit }: { audit: Audit }) {
+  const s = useApp();
+  const [busy, setBusy] = useState(false);
+  const existing = s.clients.find((c) => c.domain === audit.prospect_domain);
+  if (existing) return <Link href={`/clients/${existing.id}`} className="btn btn-compact"><UserPlus size={14} /> Open client</Link>;
+  const vars = audit.hub.variations ?? [];
+  return (
+    <Button size="compact" disabled={audit.status !== "complete" || !vars.length} loading={busy} onClick={async () => {
+      setBusy(true);
+      try {
+        const [c] = await s.addClients([{
+          name: audit.prospect_name ?? audit.prospect_domain, domain: audit.prospect_domain, favicon_url: faviconFor(audit.prospect_domain, 128),
+          description: null, industry: audit.hub.category ?? audit.keyword, region: audit.region,
+          competitors: audit.competitor_domain ? [{ name: audit.competitor_name ?? audit.competitor_domain, domain: audit.competitor_domain }] : [],
+          prompts: vars.slice(0, 10).map((v) => ({ text: v.prompt, intent: v.intent as Intent, source: "haiku" as const })),
+        }]);
+        s.toast(`${c.name} added with ${Math.min(10, vars.length)} prompts`, { action: { label: "Open", href: `/clients/${c.id}` } });
+      } catch (e) { s.toast((e as Error).message, { tone: "error" }); } finally { setBusy(false); }
+    }}><UserPlus size={14} /> Add as client</Button>
   );
 }

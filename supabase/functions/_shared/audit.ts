@@ -25,7 +25,7 @@ export type Cell = {
 };
 
 export type Risk = "high" | "at_risk" | "visible";
-export const RISK_LABEL: Record<Risk, string> = { high: "High risk", at_risk: "At risk", visible: "Visible" };
+export const RISK_LABEL: Record<Risk, string> = { high: "Critical risk", at_risk: "At risk", visible: "Visible" };
 
 // What the prospect sees: on the widget, and in the 3-page PDF.
 export type ProspectReport = {

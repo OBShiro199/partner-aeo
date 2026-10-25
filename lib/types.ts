@@ -160,6 +160,7 @@ export type Audit = {
   cached_from: string | null;
   host: string | null;
   created_at: string;
+  started_at: string | null;
   finished_at: string | null;
 };
 
