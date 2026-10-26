@@ -12,7 +12,7 @@ import { Button, cx, Meter } from "@/components/ui";
 // Unit cost behind each plan: ~$0.026 per check, measured (ChatGPT $0.030, Perplexity $0.006, Gemini $0.037),
 // 10 prompts x 4 engines x ~4.3 weekly scans = 172 checks, about $4.40 per client per month.
 const PLANS = [
-  { id: "starter", name: "Starter", price: 149, clients: 10, seats: 3, cadence: "Weekly scans", features: ["4 live answer engines", "10 prompts per client", "Client dashboards", "CSV export*"] },
+  { id: "starter", name: "Starter", price: 149, clients: 10, seats: 3, cadence: "Weekly scans", features: ["4 live answer engines", "10 prompts per client", "Client dashboards", "CSV export"] },
   { id: "growth", name: "Growth", price: 349, clients: 30, seats: 10, cadence: "Weekly scans, on-demand checks", features: ["Everything in Starter", "Competitor share of voice", "White-label reports*", "Priority support"], popular: true },
   { id: "scale", name: "Scale", price: 899, clients: 100, seats: 50, cadence: "Twice-weekly scans", features: ["Everything in Growth", "API access*", "SSO*", "Dedicated onboarding"] },
 ];

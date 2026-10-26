@@ -2,9 +2,10 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { MagnifyingGlass, Tray } from "@phosphor-icons/react";
+import { DownloadSimple, MagnifyingGlass, Tray } from "@phosphor-icons/react";
 import { useGrowth } from "@/lib/growth";
 import { ago } from "@/lib/format";
+import { downloadCsv, today } from "@/lib/csv";
 import type { LeadStatus } from "@/lib/types";
 import { Toolbar } from "@/components/shell/Toolbar";
 import { RiskTag } from "@/components/growth/AuditView";
@@ -24,7 +25,13 @@ export default function LeadsPage() {
 
   return (
     <>
-      <Toolbar>
+      <Toolbar right={g.leads.length > 0 && (
+        <button className="btn btn-compact btn-ghost" onClick={() => downloadCsv(`leads-${today()}.csv`, [
+          ["Captured", "Name", "Email", "Phone", "Status", "Business", "Keyword", "Competitor", "AI Search Score", "Deflection rate", "Notes"],
+          ...rows.map(({ lead, audit }) => [lead.created_at.slice(0, 10), lead.name, lead.email, lead.phone, lead.status, audit?.prospect_domain, audit?.keyword,
+            audit?.competitor_domain, audit?.score, audit?.deflection_rate == null ? null : `${Math.round(audit.deflection_rate * 100)}%`, lead.notes]),
+        ])}><DownloadSimple size={14} /> Export CSV</button>
+      )}>
         <span className="text-ink font-medium">Leads</span>
         <span className="tag tnum">{g.leads.length}</span>
         <div className="relative hidden sm:block ml-2">

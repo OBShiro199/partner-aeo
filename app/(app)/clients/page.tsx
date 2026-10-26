@@ -2,11 +2,12 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { DotsThree, MagnifyingGlass, Plus, UsersThree } from "@phosphor-icons/react";
+import { DotsThree, DownloadSimple, MagnifyingGlass, Plus, UsersThree } from "@phosphor-icons/react";
 import { useApp } from "@/lib/store";
 import { clientTable } from "@/lib/stats";
 import { FlagIcon, regionByCode } from "@/lib/regions";
 import { ago, pct, plural, score } from "@/lib/format";
+import { downloadCsv, today } from "@/lib/csv";
 import { Toolbar } from "@/components/shell/Toolbar";
 import { Bar } from "@/components/charts";
 import { Button, cx, Delta, Empty, Favicon, Menu, Sparkline } from "@/components/ui";
@@ -23,7 +24,16 @@ export default function ClientsPage() {
 
   return (
     <>
-      <Toolbar right={<Button size="compact" variant="primary" onClick={() => s.setAddClientOpen(true)}><Plus size={14} className="text-blue" /> Add client</Button>}>
+      <Toolbar right={<>
+        {rows.length > 0 && (
+          <button className="btn btn-compact btn-ghost max-sm:hidden" onClick={() => downloadCsv(`clients-${today()}.csv`, [
+            ["Client", "Domain", "Market", "Status", `Visibility (${s.rangeDays}d)`, "Change", "Mention rate", "Citation rate", "Answers", "Last checked"],
+            ...list.map((r) => [r.client.name, r.client.domain, r.client.region, r.client.status, r.visibility == null ? null : Math.round(r.visibility),
+              r.delta == null ? null : Math.round(r.delta), pct(r.mentionRate), pct(r.citationRate), r.answers, r.lastChecked?.slice(0, 10)]),
+          ])}><DownloadSimple size={14} /> Export CSV</button>
+        )}
+        <Button size="compact" variant="primary" onClick={() => s.setAddClientOpen(true)}><Plus size={14} className="text-blue" /> Add client</Button>
+      </>}>
         <span className="text-ink font-medium">Clients</span>
         <span className="tag tnum">{s.clients.length}/{s.agency!.client_limit}</span>
         <div className="relative hidden sm:block ml-2">

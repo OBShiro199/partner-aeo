@@ -3,6 +3,7 @@ import { Sidebar } from "@/components/shell/Sidebar";
 import { AddClientDialog } from "@/components/AddClientDialog";
 import { Toasts } from "@/components/ui";
 import { GrowthLoader } from "@/components/growth/GrowthLoader";
+import { CommandPalette } from "@/components/CommandPalette";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -13,6 +14,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
       <AddClientDialog />
       <GrowthLoader />
+      <CommandPalette />
       <Toasts />
     </Gate>
   );

@@ -1,11 +1,11 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { SquaresFour, UsersThree, CreditCard, GearSix, Plus, CaretUpDown, SignOut, Flask, Tray, Strategy, Code } from "@phosphor-icons/react";
+import { SquaresFour, UsersThree, CreditCard, GearSix, Plus, CaretUpDown, SignOut, Flask, Tray, Strategy, Code, MagnifyingGlass } from "@phosphor-icons/react";
 import { useApp } from "@/lib/store";
 import { useGrowth } from "@/lib/growth";
 import { isDemo } from "@/lib/repo";
-import { cx, Favicon, Menu } from "../ui";
+import { cx, Favicon, Kbd, Menu } from "../ui";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", Icon: SquaresFour, tour: "nav-dashboard" },
@@ -69,6 +69,15 @@ export function Sidebar() {
           <Plus size={15} weight="bold" className="text-blue" />
           <span className="hidden min-[1100px]:inline">Add client</span>
           <span className="hidden min-[1100px]:inline ml-auto text-faint font-normal tnum">{clients.length}/{agency.client_limit}</span>
+        </button>
+        <button
+          onClick={() => window.dispatchEvent(new Event("open-command-palette"))}
+          className="mt-1.5 w-full h-8 flex items-center gap-2.5 px-2 rounded-md text-muted hover:bg-hover hover:text-ink transition-colors justify-center min-[1100px]:justify-start"
+          aria-label="Search (Command K)"
+        >
+          <MagnifyingGlass size={16} />
+          <span className="hidden min-[1100px]:inline">Search</span>
+          <span className="hidden min-[1100px]:flex ml-auto gap-0.5"><Kbd>⌘</Kbd><Kbd>K</Kbd></span>
         </button>
       </div>
 
