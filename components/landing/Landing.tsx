@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Check, Plus, Minus, Buildings, Sparkle, ChartLineUp, Quotes, UsersThree, Flask, Globe, ShieldCheck, Lightning } from "@phosphor-icons/react";
+import { ArrowLeft, ArrowRight, Check, Plus, Minus, Buildings, Sparkle, ChartLineUp, Quotes, UsersThree, Flask, Globe, ShieldCheck, Lightning, Code, Tray, PresentationChart, LockSimple } from "@phosphor-icons/react";
 import { ENGINES, EngineLogo } from "@/lib/engines";
 import { repo } from "@/lib/repo";
 import { FlagIcon } from "@/lib/regions";
@@ -9,6 +9,7 @@ import { Wordmark } from "../brand";
 import { cx } from "../ui";
 import { Counter, Marquee, Reveal, Scribble } from "./motion";
 import { HeroMock } from "./HeroMock";
+import { ScoreGauge } from "../growth/ScoreGauge";
 
 const RAIL = "mx-auto w-full max-w-[1180px] border-x border-hairline";
 
@@ -25,6 +26,7 @@ export function Landing() {
       <HowItWorks />
       <FeatureCarousel />
       <Numbers />
+      <LeadEngine />
       <Tenancy />
       <Pricing cta={cta} />
       <Faq />
@@ -49,6 +51,7 @@ function Nav({ cta }: { cta: { href: string; label: string } }) {
         <nav className="hidden md:flex items-center gap-5 text-muted">
           <a href="#how" className="hover:text-ink">How it works</a>
           <a href="#features" className="hover:text-ink">Product</a>
+          <a href="#leads" className="hover:text-ink">Win clients</a>
           <a href="#pricing" className="hover:text-ink">Pricing</a>
           <a href="#faq" className="hover:text-ink">FAQ</a>
         </nav>
@@ -371,10 +374,52 @@ function Tenancy() {
 }
 
 const PLANS = [
-  { n: "Starter", p: 149, c: "10 clients · 3 seats", f: ["4 live engines", "10 prompts per client", "Weekly scans"] },
-  { n: "Growth", p: 349, c: "30 clients · 10 seats", f: ["Everything in Starter", "Share of voice", "White-label reports*"], pop: true },
-  { n: "Scale", p: 899, c: "100 clients · 50 seats", f: ["Everything in Growth", "Twice-weekly scans", "API access and SSO*"] },
+  { n: "Starter", p: 149, c: "10 clients · 3 seats", f: ["4 live engines", "10 prompts per client", "Lead widget: 50 scans a month", "10 strategy runs a month"] },
+  { n: "Growth", p: 349, c: "30 clients · 10 seats", f: ["Everything in Starter", "Lead widget: 200 scans a month", "30 strategy runs a month", "White-label prospect reports"], pop: true },
+  { n: "Scale", p: 899, c: "100 clients · 50 seats", f: ["Everything in Growth", "Lead widget: 1,000 scans a month", "Twice-weekly scans", "API access and SSO*"] },
 ];
+
+// The growth side of the product: the scanner on the agency's own site, and what lands in the dashboard.
+function LeadEngine() {
+  const steps = [
+    { Icon: Code, t: "Paste one line on your site", b: "The scanner runs in your colours, under your name. Prospects enter their site, what they sell and a competitor." },
+    { Icon: LockSimple, t: "They see the score, you get the lead", b: "An AI Search Score and how often a rival is recommended instead. The full 3-page report unlocks with an email and phone number." },
+    { Icon: PresentationChart, t: "Walk into the call with a pitch", b: "Each lead arrives with 25 buyer prompts and their search volume, the sources to win, a cold email, a call script and an editable deck." },
+  ];
+  return (
+    <section id="leads" className="hair-b scroll-mt-14">
+      <div className={cx(RAIL, "grid lg:grid-cols-2")}>
+        <div className="px-4 sm:px-6 py-20 sm:py-28 lg:hair-r">
+          <SectionHead eyebrow="Win new clients" title="Your website, now an AI search audit that captures leads" body="The same data your clients pay for becomes your best sales tool." />
+          <ol className="mt-10 flex flex-col gap-6">
+            {steps.map(({ Icon, t, b }, i) => (
+              <Reveal as="li" key={t} delay={i * 100} className="flex gap-4">
+                <span className="size-9 rounded-md border border-blue-edge bg-blue-soft grid place-items-center flex-none"><Icon size={17} className="text-blue-ink" /></span>
+                <span><span className="block text-ink font-medium t-14">{t}</span><span className="block text-muted mt-1">{b}</span></span>
+              </Reveal>
+            ))}
+          </ol>
+        </div>
+        <div className="relative min-h-[460px] overflow-hidden flex items-center justify-center py-14 min-w-0">
+          <div className="absolute inset-0 dots-bg opacity-70" aria-hidden />
+          <div className="relative w-[min(400px,90%)] flex flex-col gap-3">
+            <Reveal className="card p-5 flex flex-col items-center" >
+              <div className="w-full flex items-center gap-2 mb-2"><span className="size-5 rounded-full bg-[#2f7d6d22] text-[#2f7d6d] grid place-items-center text-[10px] font-medium">N</span><span className="text-ink font-medium">Northlight Digital</span><span className="ml-auto flex gap-1">{["chatgpt", "perplexity", "gemini", "claude"].map((e) => <EngineLogo key={e} id={e} size={13} />)}</span></div>
+              <ScoreGauge value={34} color="#2f7d6d" size={200} />
+              <span className="tag tag-amber mt-2">At risk</span>
+              <p className="text-muted text-center mt-3"><span className="text-[var(--danger-ink)] font-medium tnum">66%</span> of answers recommended a competitor instead.</p>
+            </Reveal>
+            <Reveal delay={250} className="card p-3.5 flex items-center gap-3 ml-8 shadow-[0_8px_24px_rgba(8,9,10,0.06)]">
+              <span className="size-8 rounded-md border border-hairline grid place-items-center"><Tray size={15} className="text-blue" /></span>
+              <span className="min-w-0 flex-1"><span className="block text-ink font-medium truncate">New lead · brightsmile.co.uk</span><span className="block text-faint t-12">Strategy pack and deck ready</span></span>
+              <span className="tag tag-blue">New</span>
+            </Reveal>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function Pricing({ cta }: { cta: { href: string; label: string } }) {
   return (
@@ -405,6 +450,7 @@ const FAQS = [
   { q: "What is AEO?", a: "Answer engine optimisation: making sure assistants like ChatGPT, Gemini, Claude and Perplexity name and cite a brand when buyers ask them for a recommendation." },
   { q: "Is this what a customer actually sees?", a: "Close to it. We query each engine through its API with web search on, via DataForSEO. That approximates a searching user, but isn't identical to a signed-in consumer session." },
   { q: "How are prompts chosen?", a: "Claude Haiku reads each client's homepage and writes up to 10 prompts across four intents: best-for, problem-led, comparison and local. You can edit, pause or add your own." },
+  { q: "What is the lead widget?", a: "A scanner you embed on your own site with one line of code. Visitors see how visible they are in AI search; to get the full white-label report they leave an email and phone number, and the lead lands in your dashboard with a pitch pack." },
   { q: "Can my team share one workspace?", a: "Yes. Each agency is a tenant with seats. Owners and admins manage clients, billing and invites; members work on clients." },
   { q: "What does it cost to run?", a: "Each check costs DataForSEO roughly one to three cents. A client with 10 prompts on 4 engines, scanned weekly, is about $4.40 a month in API fees. That's included in your plan." },
 ];

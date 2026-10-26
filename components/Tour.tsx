@@ -13,6 +13,8 @@ export const TOUR: Step[] = [
   { target: "kpis", title: "The four numbers that matter", body: "Visibility score, how often AI mentions the brand, how often it cites their site, and average rank in lists.", side: "bottom" },
   { target: "engines", title: "Engine by engine", body: "See which assistant recommends your clients and which one ignores them.", side: "top" },
   { target: "clients-table", title: "Your whole book", body: "Sort clients by visibility or change. Open one to see every prompt and every answer.", side: "top" },
+  { target: "nav-widget", title: "Win new clients from your website", body: "Put the AI visibility scanner on your site. Prospects see their score, and leave their details to get the full report.", side: "right" },
+  { target: "nav-leads", title: "Leads arrive ready to pitch", body: "Each lead comes with a strategy pack: 25 prompts with search volume, a cold email, a call script and an editable deck.", side: "right" },
   { target: "nav-lab", title: "Test one query at a time", body: "Send a single prompt to a single engine and read the raw answer. Budget-capped so testing never runs away.", side: "right" },
 ];
 

@@ -6,7 +6,7 @@ import {
 } from "@phosphor-icons/react";
 import { useApp } from "@/lib/store";
 import { useGrowth } from "@/lib/growth";
-import { cx, Dialog, Favicon, Kbd } from "./ui";
+import { cx, Dialog, Favicon, Kbd, modKey } from "./ui";
 
 type Item = { id: string; group: string; label: string; hint?: string; icon: React.ReactNode; run: () => void; keywords?: string };
 
@@ -124,7 +124,7 @@ export function CommandPalette() {
         <div className="h-9 px-4 hair-t flex items-center gap-3 text-faint t-12">
           <span className="flex items-center gap-1"><Kbd>↑</Kbd><Kbd>↓</Kbd> move</span>
           <span className="flex items-center gap-1"><Kbd>↵</Kbd> open</span>
-          <span className="ml-auto flex items-center gap-1"><Kbd>⌘</Kbd><Kbd>K</Kbd> anywhere</span>
+          <span className="ml-auto flex items-center gap-1"><Kbd>{modKey()}</Kbd><Kbd>K</Kbd> anywhere</span>
         </div>
       </div>
     </Dialog>

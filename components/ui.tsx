@@ -235,6 +235,11 @@ export function Delta({ value }: { value: number | null }) {
   return <span className={cx("tnum font-medium", r > 0 ? "text-success-ink" : "text-danger-ink")}>{r > 0 ? "+" : ""}{r}</span>;
 }
 
+// "⌘" on Apple devices, "Ctrl" elsewhere, for shortcut hints. Client-only screens, so no hydration mismatch.
+export function modKey() {
+  return typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? "⌘" : "Ctrl";
+}
+
 export function Kbd({ children }: { children: ReactNode }) {
   return <kbd className="inline-grid place-items-center min-w-5 h-5 px-1 rounded-[4px] border border-hairline text-[11px] text-faint font-sans">{children}</kbd>;
 }

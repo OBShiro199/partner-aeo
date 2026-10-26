@@ -5,7 +5,7 @@ import { SquaresFour, UsersThree, CreditCard, GearSix, Plus, CaretUpDown, SignOu
 import { useApp } from "@/lib/store";
 import { useGrowth } from "@/lib/growth";
 import { isDemo } from "@/lib/repo";
-import { cx, Favicon, Kbd, Menu } from "../ui";
+import { cx, Favicon, Kbd, Menu, modKey } from "../ui";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", Icon: SquaresFour, tour: "nav-dashboard" },
@@ -77,7 +77,7 @@ export function Sidebar() {
         >
           <MagnifyingGlass size={16} />
           <span className="hidden min-[1100px]:inline">Search</span>
-          <span className="hidden min-[1100px]:flex ml-auto gap-0.5"><Kbd>⌘</Kbd><Kbd>K</Kbd></span>
+          <span className="hidden min-[1100px]:flex ml-auto gap-0.5"><Kbd>{modKey()}</Kbd><Kbd>K</Kbd></span>
         </button>
       </div>
 
