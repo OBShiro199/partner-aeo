@@ -273,7 +273,7 @@ function AnswersTab({ clientId, results, engines, initialPrompt, initialEngine }
               </div>
               <h2 className="h3 mb-5">{sel.prompt_text}</h2>
               {sel.status === "failed" ? <p className="text-danger-ink">{sel.error ?? "The engine didn't answer."}</p> : (
-                <AnswerText text={sel.response_text ?? ""} brand={brandVariants(client.name, client.domain, client.aliases)} competitors={comps.map((c) => c.name)} />
+                <LazyAnswer key={sel.id} result={sel} brand={brandVariants(client.name, client.domain, client.aliases)} competitors={comps.map((c) => c.name)} />
               )}
               {sel.competitors_mentioned.length > 0 && (
                 <p className="mt-6 text-muted">Competitors named: {sel.competitors_mentioned.map((c) => <span key={c} className="tag tag-amber mr-1">{c}</span>)}</p>
@@ -382,4 +382,18 @@ function SettingsTab({ clientId }: { clientId: string }) {
       <LiveStatus label={`Created ${ago(c.created_at).toLowerCase()}`} tone="green" />
     </div>
   );
+}
+
+// Answer text isn't part of the workspace load; fetch it the first time an answer is opened.
+const textCache = new Map<string, string>();
+function LazyAnswer({ result, brand, competitors }: { result: Result; brand: string[]; competitors: string[] }) {
+  const [text, setText] = useState<string | null>(result.response_text ?? textCache.get(result.id) ?? null);
+  useEffect(() => {
+    if (text != null) return;
+    let live = true;
+    repo.resultText(result.id).then((t) => { textCache.set(result.id, t ?? ""); if (live) setText(t ?? ""); }).catch(() => live && setText(""));
+    return () => { live = false; };
+  }, [result.id, text]);
+  if (text == null) return <div className="flex flex-col gap-2.5" aria-busy><div className="skeleton h-4 w-11/12" /><div className="skeleton h-4 w-9/12" /><div className="skeleton h-4 w-10/12" /></div>;
+  return text ? <AnswerText text={text} brand={brand} competitors={competitors} /> : <p className="text-muted">No answer text was stored for this check.</p>;
 }

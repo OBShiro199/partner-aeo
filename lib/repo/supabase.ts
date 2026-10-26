@@ -28,6 +28,9 @@ async function call<T>(name: string, body: Record<string, unknown>): Promise<T> 
   return data as T;
 }
 
+// Everything but response_text: the dashboard needs outcomes, not 5 KB of prose per answer.
+const RESULT_LIST = "id, scan_id, client_id, prompt_id, prompt_text, engine, model, status, citations, mentioned, position, competitors_mentioned, own_domain_cited, cost_usd, latency_ms, error, created_at";
+
 const toUser = (u: { id: string; email?: string; user_metadata?: Record<string, unknown> } | null | undefined): User | null =>
   u ? { id: u.id, email: u.email ?? "", full_name: (u.user_metadata?.full_name as string) ?? "" } : null;
 
@@ -101,7 +104,7 @@ export const supabaseRepo: Repo = {
       db().from("clients").select("*").eq("agency_id", id).neq("status", "archived").order("created_at"),
       db().from("competitors").select("id, client_id, name, domain").eq("agency_id", id),
       db().from("prompts").select("*").eq("agency_id", id).order("position"),
-      db().from("scan_results").select("*").eq("agency_id", id).order("created_at", { ascending: false }).limit(5000),
+      db().from("scan_results").select(RESULT_LIST).eq("agency_id", id).order("created_at", { ascending: false }).limit(5000),
     ]);
     fail(agency.error);
     return {
@@ -115,7 +118,7 @@ export const supabaseRepo: Repo = {
       clients: (clients.data ?? []) as Client[],
       competitors: (competitors.data ?? []) as Competitor[],
       prompts: (prompts.data ?? []) as Prompt[],
-      results: ((results.data ?? []) as Result[]).map((r) => ({ ...r, cost_usd: Number(r.cost_usd) })),
+      results: ((results.data ?? []) as unknown as Result[]).map((r) => ({ ...r, response_text: r.response_text ?? null, cost_usd: Number(r.cost_usd) })),
     };
   },
 
@@ -190,6 +193,11 @@ export const supabaseRepo: Repo = {
 
   runCheck: (agencyId, a) =>
     call("run-llm-check", { agency_id: agencyId, engine: a.engine, ...(a.promptId ? { prompt_id: a.promptId } : { client_id: a.clientId, prompt_text: a.promptText }) }),
+  async resultText(id) {
+    const { data, error } = await db().from("scan_results").select("response_text").eq("id", id).maybeSingle();
+    fail(error);
+    return data?.response_text ?? null;
+  },
   dfsStatus: (agencyId) => call("dfs-status", { agency_id: agencyId }),
   async usage(agencyId) {
     const { data, error } = await db().from("api_usage").select("provider, endpoint, status, cost_usd, created_at").eq("agency_id", agencyId).order("created_at", { ascending: false }).limit(200);

@@ -51,6 +51,8 @@ export interface Repo {
   deletePrompt(id: string): Promise<void>;
 
   runCheck(agencyId: string, args: { promptId?: string; clientId: string; promptText?: string; engine: string }): Promise<CheckResponse>;
+  // The answer text is left out of the workspace load (it's the bulk of the bytes); fetch it when shown.
+  resultText(id: string): Promise<string | null>;
   dfsStatus(agencyId: string): Promise<DfsStatus>;
   usage(agencyId: string): Promise<UsageRow[]>;
 

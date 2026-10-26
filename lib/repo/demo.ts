@@ -328,6 +328,9 @@ export const demoRepo: Repo = {
     save(d);
     return { result: r, usage: { calls_used: 0, calls_max: 3, spent_usd: 0 } };
   },
+  async resultText(rid) {
+    return load().results.find((r) => r.id === rid)?.response_text ?? null;
+  },
   async dfsStatus() {
     return { configured: false, balance_usd: null, calls_used: 0, calls_max: 3, spent_usd: 0, max_spend_usd: 0.3 };
   },
