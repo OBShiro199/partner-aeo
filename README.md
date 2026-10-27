@@ -16,19 +16,22 @@ Set `NEXT_PUBLIC_DEMO_MODE=1` to run the whole app in the browser on sample data
 
 ## Set up Supabase (project `nfnrezdqbunlrmdqmxzj`)
 
-1. **Schema.** Apply `supabase/migrations/20261021000000_init.sql`. Either paste it into the SQL editor, or:
+1. **Schema.** Apply every file in `supabase/migrations/` in order (they're dated). Either paste them into the SQL editor, or:
    ```bash
    npx supabase link --project-ref nfnrezdqbunlrmdqmxzj
    npx supabase db push
    ```
 2. **Edge functions.**
    ```bash
-   npx supabase functions deploy site-meta generate-prompts run-llm-check dfs-status
+   npx supabase functions deploy site-meta generate-prompts run-llm-check dfs-status strategy-run
+   npx supabase functions deploy widget email-worker email-unsubscribe --no-verify-jwt
    ```
+   `widget`, `email-worker` and `email-unsubscribe` are public on purpose: the widget is identified by its public key, the worker takes no input, and unsubscribe needs the token from the email.
 3. **Function secrets** (Dashboard > Edge Functions > Secrets, or `npx supabase secrets set`):
    - `DATAFORSEO_LOGIN`, `DATAFORSEO_PASSWORD`
    - `ANTHROPIC_API_KEY` (optional: without it, prompts come from templates)
    - `DFS_MODELS` (optional JSON to override engine models, e.g. `{"chatgpt":"gpt-4o-mini"}`)
+   - Email (Resend): `RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_REPLY_TO`, `APP_URL`, `EMAIL_FOOTER_ADDRESS`, `REPORTS_FROM_ADDRESS`. Without the key, email waits in `email_outbox` and nothing is lost.
 4. **Auth.** For local testing, turn off "Confirm email" under Authentication > Providers > Email, or sign-ups wait for a confirmation link.
 5. In `.env.local`, set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and leave `NEXT_PUBLIC_DEMO_MODE` empty.
 
@@ -40,7 +43,13 @@ The secret key (`sb_secret_…`) is never used by the browser app. Keep it out o
   ```sql
   update platform_limits set dfs_max_calls = 500, dfs_max_spend_usd = 20;
   ```
+- The widget and Strategy Engine share a separate cap on all DataForSEO spend, `dfs_total_max_spend_usd` (default $0.60). Each run reserves its estimated cost first and skips engine calls that won't fit, noting it in the report. LLM Mentions (~$0.10+ a call) stays off until `mentions_enabled = true`. Public scans are also limited per IP per hour and per day.
+  ```sql
+  update platform_limits set dfs_total_max_spend_usd = 50, mentions_enabled = true;
+  ```
+- Agencies get monthly widget scans and strategy runs by plan (`plan_allowances`); overage is recorded in `credit_ledger` for Stripe to bill later.
 - Every paid call is logged in `api_usage` with its exact cost from DataForSEO.
+- Housekeeping runs on pg_cron: the email worker every minute, digests and reminders daily or weekly, and a sweep every 10 minutes that fails audits stuck for 15 minutes (refunding the credit) and clears IP hashes after 30 days.
 - `npm run dfs -- …` is a local, one-query tester with its own 3-call budget in `.dfs-usage.json`:
   ```bash
   npm run dfs -- balance                       # free
@@ -62,6 +71,13 @@ The secret key (`sb_secret_…`) is never used by the browser app. Keep it out o
 | `components/AddClientDialog.tsx` | The add-client flow (one dialog that morphs between steps) |
 | `lib/store.ts` | Zustand store: workspace state, filters, optimistic updates |
 | `lib/repo/` | Data layer: `supabase.ts` (real) and `demo.ts` (sample data) behind one interface |
+| `app/(app)/leads`, `strategy`, `widget` | Leads from the widget, the Strategy Engine sandbox, widget setup and embed code |
+| `app/embed/[key]`, `public/widget.js` | The public scanner agencies embed on their sites |
+| `components/growth/` | Audit view (report, blueprint, sentiment, sales kit, answers), score gauge |
+| `components/CommandPalette.tsx` | ⌘K / Ctrl+K: jump to any page, client or lead |
+| `lib/sales-files.ts` | The editable .pptx deck and the prospect PDF, built in the browser |
 | `supabase/functions/_shared/analyse.ts` | Mention, rank, citation and visibility scoring, shared by the app and the edge functions |
+| `supabase/functions/_shared/strategy.ts` | The Strategy Engine pipeline (prompts, answer matrix, volumes, sentiment, sales kit) |
+| `supabase/functions/_shared/report-pdf.ts` | The white-label 3-page PDF (`npx tsx scripts/report-preview.ts` renders a sample) |
 
 See `docs/PLAN.md` for the architecture, API choices, costs and pricing.
