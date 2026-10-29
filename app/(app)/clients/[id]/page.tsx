@@ -1,5 +1,5 @@
 "use client";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, ArrowSquareOut, Lightning, Pause, Play, Plus, Sparkle, Trash, X as XIcon } from "@phosphor-icons/react";
@@ -19,6 +19,9 @@ import { Button, cx, Empty, Favicon, Field, LiveStatus } from "@/components/ui";
 import { ScoreRing } from "@/components/charts";
 
 const TABS = ["Prompts", "Answers", "Competitors", "Settings"] as const;
+
+// Measured per-answer cost by engine (USD), for the scan estimate.
+const CHECK_COST: Record<string, number> = { chatgpt: 0.03, perplexity: 0.006, gemini: 0.04, claude: 0.03 };
 
 export default function Page() {
   return <Suspense><ClientPage /></Suspense>;
@@ -117,6 +120,32 @@ function PromptsTab({ clientId, engines, current, onOpen }: { clientId: string; 
   const [text, setText] = useState("");
   const [intent, setIntent] = useState<Intent>("best_for");
   const [gen, setGen] = useState(false);
+  const [scan, setScan] = useState<{ done: number; total: number } | null>(null);
+  const stopScan = useRef(false);
+
+  // Every active prompt on every live engine that hasn't been checked in the last day.
+  const DAY = 86_400_000;
+  const todo = active.flatMap((p) => engines
+    .filter((e) => !current.some((r) => r.prompt_id === p.id && r.engine === e && r.status === "done" && Date.now() - new Date(r.created_at).getTime() < DAY))
+    .map((engine) => ({ prompt: p, engine })));
+  const estimate = todo.reduce((sum, j) => sum + (CHECK_COST[j.engine] ?? 0.03), 0);
+
+  async function scanAll() {
+    if (!todo.length) return;
+    if (!window.confirm(`Run ${plural(todo.length, "live check")} for ${client.name}? Estimated cost about $${estimate.toFixed(2)}.`)) return;
+    stopScan.current = false;
+    setScan({ done: 0, total: todo.length });
+    let ok = 0;
+    for (const j of todo) {
+      if (stopScan.current) break;
+      const r = await s.runCheck({ promptId: j.prompt.id, clientId, engine: j.engine });
+      if (!r) break; // the error (spend cap, engine down) is already on screen
+      ok++;
+      setScan({ done: ok, total: todo.length });
+    }
+    setScan(null);
+    if (ok) s.toast(`${plural(ok, "answer")} collected for ${client.name}`);
+  }
 
   async function suggest() {
     setGen(true);
@@ -140,7 +169,18 @@ function PromptsTab({ clientId, engines, current, onOpen }: { clientId: string; 
         <span className="text-faint">{active.length}/10 active</span>
         <span className="text-ghost">·</span>
         <span className="text-faint hidden sm:inline">Click a dot to read that answer. Use <Lightning size={12} className="inline -mt-0.5" /> to run one live check.</span>
-        <Button size="compact" className="ml-auto" onClick={suggest} loading={gen} disabled={active.length >= 10} minWidth={150}>
+        {scan ? (
+          <span className="ml-auto flex items-center gap-3">
+            <LiveStatus label={`Checking ${scan.done + 1} of ${scan.total}`} />
+            <button className="btn btn-compact btn-ghost" onClick={() => { stopScan.current = true; }}>Stop</button>
+          </span>
+        ) : (
+          <Button size="compact" variant="blue" className="ml-auto" onClick={scanAll} disabled={!todo.length || Object.keys(s.checking).length > 0}
+            title={todo.length ? `About $${estimate.toFixed(2)} in API costs` : "Everything was checked in the last 24 hours"}>
+            <Lightning size={14} weight="fill" /> {todo.length ? `Scan all (${todo.length})` : "All checked today"}
+          </Button>
+        )}
+        <Button size="compact" onClick={suggest} loading={gen} disabled={active.length >= 10} minWidth={150}>
           <Sparkle size={14} weight="duotone" className="text-blue" /> Suggest prompts
         </Button>
       </div>
