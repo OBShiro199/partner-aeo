@@ -20,6 +20,9 @@ const C = {
 };
 const FONT = `Geist, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif`; // single quotes: it sits inside style=""
 
+// The answer-ring mark drawn in CSS: no image to block, host or break. Ring with a blue arc and point.
+const MARK = `<span style="display:inline-block;position:relative;width:16px;height:16px;border:1.5px solid ${C.ink};border-top-color:${C.blue};border-right-color:${C.blue};border-radius:16px;vertical-align:-4px;margin-right:9px;"></span>`;
+
 export function esc(s: unknown): string {
   return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
@@ -89,7 +92,7 @@ function layout(o: { preheader: string; body: string; ctx: Ctx; reason: string }
       <tr><td style="padding:18px 32px;border-bottom:1px solid ${C.hairline};" class="pad">
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
           <td style="font-family:${FONT};font-size:14px;font-weight:500;color:${C.ink};letter-spacing:-0.01em;">
-            <img src="${esc(ctx.appUrl)}/email/mark.png" width="22" height="22" alt="" style="vertical-align:-6px;margin-right:8px;border:0;">Partner AEO
+            ${MARK}Partner AEO
           </td>
           ${ctx.agencyName ? `<td align="right" style="font-family:${FONT};font-size:13px;color:${C.faint};">${esc(ctx.agencyName)}</td>` : ""}
         </tr></table>
