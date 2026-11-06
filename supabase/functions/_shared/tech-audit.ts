@@ -37,11 +37,17 @@ type Fetched = { status: number; ms: number; body: string; type: string; challen
 async function get(url: string, ua: string, timeout = 8000): Promise<Fetched> {
   const started = Date.now();
   try {
-    const res = await fetch(url, { headers: { "User-Agent": ua, Accept: "text/html,text/plain,*/*" }, redirect: "follow", signal: AbortSignal.timeout(timeout) });
+    // Plain gzip only: some servers answer newer encodings the runtime can't decode, which reads as noise.
+    const res = await fetch(url, { headers: { "User-Agent": ua, Accept: "text/html,text/plain,*/*", "Accept-Encoding": "gzip, deflate" }, redirect: "follow", signal: AbortSignal.timeout(timeout) });
     const buf = await res.arrayBuffer();
-    const body = new TextDecoder().decode(buf.slice(0, 600_000));
+    const raw = new TextDecoder().decode(buf.slice(0, 600_000));
+    // Undecodable bytes (binary or an encoding we can't read) are treated as no body at all.
+    const garbled = (raw.slice(0, 20_000).match(/\uFFFD|[\u0000-\u0008\u000E-\u001F]/g) ?? []).length > 40;
+    const body = garbled ? "" : raw;
     const type = res.headers.get("content-type") ?? "";
-    const challenge = res.headers.has("cf-mitigated") || /just a moment\.\.\.|cf-browser-verification|challenge-platform|captcha/i.test(body.slice(0, 20_000));
+    // A challenge page, not a normal page that merely loads Cloudflare's scripts or a reCAPTCHA form.
+    const challenge = res.headers.has("cf-mitigated") || /<title>\s*just a moment/i.test(body.slice(0, 5000))
+      || (res.status >= 400 && /cf-browser-verification|cf_chl_|challenge-platform|captcha/i.test(body.slice(0, 20_000)));
     return { status: res.status, ms: Date.now() - started, body, type, challenge };
   } catch (e) {
     return { status: 0, ms: Date.now() - started, body: "", type: "", challenge: false, error: String((e as Error).message ?? e).slice(0, 120) };
@@ -67,7 +73,7 @@ export function robotsBlocks(robots: string, token: string): boolean {
       lastWasAgent = false;
     } else lastWasAgent = false;
   }
-  const own = groups.find((g) => g.agents.some((a) => a !== "*" && token.includes(a.replace(/\/.*$/, ""))));
+  const own = groups.find((g) => g.agents.some((a) => a.length > 2 && a !== "*" && token.includes(a.replace(/\/.*$/, ""))));
   const group = own ?? groups.find((g) => g.agents.includes("*"));
   if (!group) return false;
   const rootDisallowed = group.rules.some((r) => !r.allow && r.path === "/");
@@ -105,6 +111,7 @@ const types = (n: Node) => ([] as unknown[]).concat(n["@type"] ?? []).map(String
 const BUSINESS = /LocalBusiness|Organization|Corporation|Store|Restaurant|Dentist|Physician|MedicalBusiness|LegalService|Attorney|HomeAndConstructionBusiness|RoofingContractor|Plumber|Electrician|HVACBusiness|ProfessionalService|AutomotiveBusiness|FinancialService|HealthAndBeautyBusiness|RealEstateAgent|LodgingBusiness|FoodEstablishment/;
 
 const check = (pillar: PillarKey, id: string, label: string, status: CheckStatus, detail: string): TechCheck => ({ id, pillar, label, status, detail });
+const HTML = /<html|<body|<head|<!doctype/i;
 
 export async function runTechAudit(domain: string): Promise<TechAudit> {
   const base = `https://${domain.replace(/^https?:\/\//, "").replace(/\/.*$/, "")}`;
@@ -116,10 +123,11 @@ export async function runTechAudit(domain: string): Promise<TechAudit> {
     ...AI_BOTS.map((b) => get(base + "/", b.ua)),
   ]);
   const checks: TechCheck[] = [];
-  const reachable = home.status >= 200 && home.status < 400 && !!home.body;
+  const isHtml = HTML.test(home.body.slice(0, 5000));
+  const reachable = home.status >= 200 && home.status < 400 && isHtml;
   // A site that doesn't answer at all gets one honest finding, not a page of failures it never had.
-  if (!reachable && !bots.some((b) => b.status >= 200 && b.status < 400)) {
-    const why = home.status ? `answered ${home.status}` : `didn't respond (${home.error ?? "timeout"})`;
+  if (!reachable && !bots.some((b) => b.status >= 200 && b.status < 400 && HTML.test(b.body.slice(0, 5000)))) {
+    const why = home.status >= 200 && home.status < 400 ? "didn't return a readable web page" : home.status ? `answered ${home.status}` : `didn't respond (${home.error ?? "timeout"})`;
     return {
       url: base, reachable: false, score: 0,
       pillars: (Object.keys(PILLAR_LABEL) as PillarKey[]).map((key) => ({ key, label: PILLAR_LABEL[key], score: 0 })),
@@ -129,6 +137,8 @@ export async function runTechAudit(domain: string): Promise<TechAudit> {
   }
 
   // ---- Pillar 1: AI crawler access
+  // Content checks read the browser's copy of the page, or a bot's if only the bots got HTML.
+  const page = isHtml ? home.body : bots.find((b) => HTML.test(b.body.slice(0, 5000)))?.body ?? "";
   const robotsText = robots.status === 200 && !/<html/i.test(robots.body.slice(0, 500)) ? robots.body : "";
   if (!robotsText) {
     checks.push(robots.status === 0
@@ -154,39 +164,46 @@ export async function runTechAudit(domain: string): Promise<TechAudit> {
     reachable ? `${(speed / 1000).toFixed(1)}s to load the page.` : "The homepage didn't load."));
 
   // ---- Pillar 2: context ingestion
-  const llmsOk = llms.status === 200 && !/text\/html/i.test(llms.type) && llms.body.trim().length > 20;
+  // A real llms.txt is markdown, not the homepage served for every path.
+  const textFile = (f: Fetched) => f.status === 200 && !/text\/html/i.test(f.type) && f.body.trim().length > 20 && !/<html|<body/i.test(f.body.slice(0, 2000)) && f.body !== page;
+  const llmsOk = textFile(llms);
   checks.push(check("context", "llms", "/llms.txt file", llmsOk ? "pass" : "fail", llmsOk ? "Found: AI tools get a plain-text map of the site." : "Missing: there's no /llms.txt to guide AI tools."));
-  const fullOk = llmsFull.status === 200 && !/text\/html/i.test(llmsFull.type) && llmsFull.body.trim().length > 20;
+  const fullOk = textFile(llmsFull);
   checks.push(check("context", "llms-full", "/llms-full.txt file", fullOk ? "pass" : "warn", fullOk ? "Found." : "Missing (optional, but helps AI read services and pricing)."));
-  const text = strip(home.body);
+  const text = strip(page);
   checks.push(check("context", "no-js-text", "Readable without JavaScript", text.length >= 1500 ? "pass" : text.length >= 400 ? "warn" : "fail",
     `${text.length.toLocaleString("en-GB")} characters of text in the raw page${text.length < 400 ? ": most content needs JavaScript, which many AI crawlers don't run." : "."}`));
-  const ratio = home.body.length ? text.length / home.body.length : 0;
+  const ratio = page.length ? text.length / page.length : 0;
   checks.push(check("context", "text-ratio", "Text-to-code ratio", ratio >= 0.1 ? "pass" : ratio >= 0.04 ? "warn" : "fail", `${Math.round(ratio * 100)}% of the page is readable text.`));
-  const title = /<title[^>]*>([^<]{3,})<\/title>/i.test(home.body);
-  const desc = /<meta[^>]+name=["']description["'][^>]+content=["'][^"']{20,}/i.test(home.body) || /<meta[^>]+content=["'][^"']{20,}["'][^>]+name=["']description["']/i.test(home.body);
+  const title = /<title[^>]*>([^<]{3,})<\/title>/i.test(page);
+  const desc = /<meta[^>]+name=["']description["'][^>]+content=["'][^"']{20,}/i.test(page) || /<meta[^>]+content=["'][^"']{20,}["'][^>]+name=["']description["']/i.test(page);
   checks.push(check("context", "meta", "Title and meta description", title && desc ? "pass" : title || desc ? "warn" : "fail", `${title ? "Title found" : "No title"}, ${desc ? "description found" : "no meta description"}.`));
-  const h1 = (home.body.match(/<h1[\s>]/gi) ?? []).length, h2 = (home.body.match(/<h2[\s>]/gi) ?? []).length;
+  const h1 = (page.match(/<h1[\s>]/gi) ?? []).length, h2 = (page.match(/<h2[\s>]/gi) ?? []).length;
   checks.push(check("context", "headings", "Clear heading structure", h1 >= 1 && h2 >= 2 ? "pass" : h1 || h2 ? "warn" : "fail", `${h1} H1 and ${h2} H2 headings.`));
 
   // ---- Pillar 3: entity and schema
-  const nodes = jsonLd(home.body);
+  const nodes = jsonLd(page);
   const all = nodes.flatMap(types);
-  const biz = nodes.find((n) => types(n).some((t) => BUSINESS.test(t)));
+  // Schema graphs often split one business across several nodes; read them together.
+  const bizNodes = nodes.filter((n) => types(n).some((t) => BUSINESS.test(t)));
+  const biz = bizNodes[0];
+  const any = (f: (n: Node) => unknown) => bizNodes.some((n) => !!f(n));
   checks.push(check("entity", "jsonld", "Structured data (JSON-LD)", nodes.length ? "pass" : "fail", nodes.length ? `Found: ${[...new Set(all)].slice(0, 6).join(", ")}.` : "No JSON-LD: AI has to guess what the business is."));
-  checks.push(check("entity", "business-type", "Business type declared", biz ? "pass" : "fail", biz ? `Declared as ${types(biz).join(", ")}.` : "No LocalBusiness or Organization schema."));
-  const hasAddress = !!(biz && (biz.address || biz.location)), hasPhone = !!(biz && biz.telephone);
+  checks.push(check("entity", "business-type", "Business type declared", biz ? "pass" : "fail", biz ? `Declared as ${[...new Set(bizNodes.flatMap(types))].slice(0, 3).join(", ")}.` : "No LocalBusiness or Organization schema."));
+  // Address and phone can sit on linked Place / PostalAddress nodes rather than the business itself.
+  const hasAddress = any((n) => n.address || n.location) || nodes.some((n) => types(n).some((t) => t === "PostalAddress") || (types(n).includes("Place") && !!n.address));
+  const hasPhone = any((n) => n.telephone) || nodes.some((n) => !!n.telephone);
   checks.push(check("entity", "nap", "Name, address and phone in schema", hasAddress && hasPhone ? "pass" : hasAddress || hasPhone ? "warn" : "fail",
     `${hasAddress ? "Address" : "No address"}, ${hasPhone ? "phone" : "no phone"} in the business schema.`));
-  const geo = !!(biz && (biz.geo || biz.areaServed || biz.serviceArea));
+  const geo = any((n) => n.geo || n.areaServed || n.serviceArea) || nodes.some((n) => !!n.geo || types(n).includes("GeoCoordinates"));
   checks.push(check("entity", "geo", "Location and service area", geo ? "pass" : "warn", geo ? "Coordinates or service area declared." : "No coordinates or service area: AI can't tie the business to a place."));
-  const sameAs = biz ? ([] as unknown[]).concat(biz.sameAs ?? []).length : 0;
+  const sameAs = new Set(bizNodes.flatMap((n) => ([] as unknown[]).concat(n.sameAs ?? []).map(String))).size;
   checks.push(check("entity", "sameas", "Linked profiles (sameAs)", sameAs >= 2 ? "pass" : sameAs === 1 ? "warn" : "fail", sameAs ? `${sameAs} linked profile${sameAs === 1 ? "" : "s"}.` : "No sameAs links to profiles such as Google, Yelp or Wikidata."));
 
   // ---- Pillar 4: answer readiness (AI answer visibility comes from the LLM audit)
   const faq = all.some((t) => /FAQPage|QAPage/.test(t));
   checks.push(check("conversational", "faq-schema", "FAQ schema", faq ? "pass" : "fail", faq ? "FAQPage schema found." : "No FAQ schema for AI to quote answers from."));
-  const questions = (home.body.match(/<h[2-4][^>]*>[^<]{8,160}\?\s*<\/h[2-4]>/gi) ?? []).length;
+  const questions = (page.match(/<h[2-4][^>]*>[^<]{8,160}\?\s*<\/h[2-4]>/gi) ?? []).length;
   checks.push(check("conversational", "questions", "Question-and-answer content", questions >= 3 ? "pass" : questions ? "warn" : "fail", `${questions} question-style heading${questions === 1 ? "" : "s"} on the homepage.`));
 
   const pillars = (Object.keys(PILLAR_LABEL) as PillarKey[]).map((key) => {
@@ -195,8 +212,8 @@ export async function runTechAudit(domain: string): Promise<TechAudit> {
     return { key, label: PILLAR_LABEL[key], score };
   });
   return {
-    url: base, reachable,
-    score: reachable ? Math.round(pillars.reduce((s, p) => s + p.score, 0) / pillars.length) : 0,
+    url: base, reachable: !!page,
+    score: page ? Math.round(pillars.reduce((s, p) => s + p.score, 0) / pillars.length) : 0,
     pillars, checks, checked_at: new Date().toISOString(),
   };
 }

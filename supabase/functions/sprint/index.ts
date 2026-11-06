@@ -101,7 +101,7 @@ Deno.serve(handle(async (req) => {
     const rows = [
       {
         agency_id: agencyId, source: "sprint", sprint_role: "client", depth: "lite", prospect_domain: client, keyword, region,
-        competitor_domain: leader.domain, competitor_name: leader.title, status: "queued", stage: "Waiting to start", tech: clientTech, triggered_by: user.id,
+        competitor_domain: leader.domain, competitor_name: leader.title, status: "queued", stage: "Waiting to start", tech: clientTech, business: {}, triggered_by: user.id,
       },
       ...picks.map(({ c, tech }) => {
         const rival = candidates.find((x) => x.domain !== c.domain)!;
