@@ -9,6 +9,7 @@ import { Button, cx, Favicon, Field, Kbd, LiveStatus } from "@/components/ui";
 import { EnginePicker, RegionGrid } from "@/components/pickers";
 import { useApp } from "@/lib/store";
 import { isDemo, repo } from "@/lib/repo";
+import { readSprint } from "@/lib/sprint";
 import { CLIENT_BANDS } from "@/lib/regions";
 import { EngineLogo, liveEngineIds, MAX_ENGINES } from "@/lib/engines";
 import { faviconFor, nameFromDomain, normaliseDomain, plural } from "@/lib/format";
@@ -40,7 +41,13 @@ function Onboarding() {
   const status = useApp((s) => s.status);
   const [d, setD] = useState<Draft>(() => {
     if (typeof window === "undefined") return initial;
-    try { return { ...initial, ...JSON.parse(sessionStorage.getItem(DRAFT_KEY) ?? "{}") }; } catch { return initial; }
+    try {
+      const draft = { ...initial, ...JSON.parse(sessionStorage.getItem(DRAFT_KEY) ?? "{}") };
+      // Came from the free-audit form: their client is the first one to add.
+      const sp = readSprint();
+      if (sp && !draft.clients.some(Boolean)) draft.clients = [sp.client_url, "", ""];
+      return draft;
+    } catch { return initial; }
   });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -419,9 +426,10 @@ function StepLaunch({ d, meta }: { d: Draft; meta: { domain: string; favicon_url
               </div>
             ))}
           </div>
-          <div className="flex justify-end mt-6 pt-5 hair-t">
-            <Button variant="primary" size="large" onClick={() => router.replace("/dashboard")}>
-              <Sparkle size={15} weight="duotone" className="text-blue" /> Go to dashboard
+          <div className="flex justify-end gap-2 mt-6 pt-5 hair-t">
+            <Button variant="ghost" size="large" onClick={() => router.replace("/dashboard")}>Go to dashboard</Button>
+            <Button variant="primary" size="large" onClick={() => router.replace("/sprint")}>
+              <Sparkle size={15} weight="duotone" className="text-blue" /> Get my free audits
             </Button>
           </div>
         </div>

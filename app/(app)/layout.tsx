@@ -4,6 +4,7 @@ import { AddClientDialog } from "@/components/AddClientDialog";
 import { Toasts } from "@/components/ui";
 import { GrowthLoader } from "@/components/growth/GrowthLoader";
 import { CommandPalette } from "@/components/CommandPalette";
+import { UpgradeDialog } from "@/components/growth/Upgrade";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -16,6 +17,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <AddClientDialog />
       <GrowthLoader />
       <CommandPalette />
+      <UpgradeDialog />
       <Toasts />
     </Gate>
   );

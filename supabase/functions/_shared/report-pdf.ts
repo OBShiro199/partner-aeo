@@ -2,6 +2,7 @@
 // email worker (Deno, npm:pdf-lib) and the dashboard (browser) render the same file.
 // Branding is the agency's only; Partner AEO never appears.
 import { ENGINE_LABEL, RISK_LABEL, type ProspectReport } from "./audit.ts";
+import type { TechAudit } from "./tech-audit.ts";
 
 export type Branding = {
   agency_name: string;
@@ -37,7 +38,8 @@ function hex(c: string): [number, number, number] {
   return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255];
 }
 
-export async function renderReportPdf(lib: PdfLib, r: ProspectReport, b: Branding): Promise<Uint8Array> {
+// With a technical audit the report gains a fourth page: AI readiness by pillar, with every check.
+export async function renderReportPdf(lib: PdfLib, r: ProspectReport, b: Branding, tech?: TechAudit | null): Promise<Uint8Array> {
   const { PDFDocument, StandardFonts, rgb } = lib;
   const doc = await PDFDocument.create();
   doc.setTitle(pdfSafe(`Executive Diagnostic Assessment: ${r.prospect.name}`));
@@ -101,7 +103,8 @@ export async function renderReportPdf(lib: PdfLib, r: ProspectReport, b: Brandin
     }
   };
 
-  const pages = [doc.addPage([W, H]), doc.addPage([W, H]), doc.addPage([W, H])];
+  const withTech = !!tech?.checks?.length;
+  const pages = Array.from({ length: withTech ? 4 : 3 }, () => doc.addPage([W, H]));
   pages.forEach((pg, i) => {
     pg.drawRectangle({ x: 0, y: H - 4, width: W, height: 4, color: col(brand) });
     // Header: agency logo + name, report label on the right.
@@ -122,7 +125,7 @@ export async function renderReportPdf(lib: PdfLib, r: ProspectReport, b: Brandin
     // Footer
     rule(pg, 46);
     text(pg, `Prepared by ${b.agency_name} for ${r.prospect.name} · ${date}`, M, 30, { size: 8, c: FAINT });
-    const pn = `Page ${i + 1} of 3`;
+    const pn = `Page ${i + 1} of ${pages.length}`;
     text(pg, pn, W - M - font.widthOfTextAtSize(pn, 8), 30, { size: 8, c: FAINT });
   });
 
@@ -259,6 +262,47 @@ export async function renderReportPdf(lib: PdfLib, r: ProspectReport, b: Brandin
     const cy = by + 30;
     const parts = [b.contact_name, b.contact_email, b.contact_phone, b.booking_url ?? b.website].filter(Boolean) as string[];
     text(pg, parts.join("   ·   "), M + 20, cy, { size: 10, f: bold, c: brand });
+  }
+
+  // ---------------- Page 4: technical AI readiness ----------------
+  if (withTech && tech) {
+    const pg = pages[3];
+    let y = H - 110;
+    text(pg, "Is your website ready for AI?", M, y, { size: 22, f: bold, c: INK });
+    y -= 22;
+    y = para(pg, "Before an AI assistant can recommend a business, its crawlers have to reach the site, read it and understand what the business is. We checked each step.", M, y, W - 2 * M, { size: 10.5 });
+    y -= 20;
+    // Pillar scores as four cells.
+    const cw = (W - 2 * M) / 4;
+    pg.drawRectangle({ x: M, y: y - 64, width: W - 2 * M, height: 64, borderColor: col(HAIR), borderWidth: 0.8 });
+    tech.pillars.forEach((p, i) => {
+      const x = M + i * cw;
+      if (i) pg.drawLine({ start: { x, y: y - 10 }, end: { x, y: y - 54 }, thickness: 0.6, color: col(HAIR) });
+      text(pg, p.label, x + 12, y - 20, { size: 8.5, c: FAINT });
+      const c = p.score >= 70 ? GREEN : p.score >= 40 ? [0.78, 0.5, 0.06] : RED;
+      text(pg, `${p.score}`, x + 12, y - 48, { size: 22, f: bold, c });
+      text(pg, "/100", x + 14 + bold.widthOfTextAtSize(`${p.score}`, 22), y - 48, { size: 9, c: FAINT });
+    });
+    y -= 88;
+    const order = { fail: 0, warn: 1, pass: 2 } as const;
+    const checks = [...tech.checks].sort((a, b2) => order[a.status] - order[b2.status]).slice(0, 16);
+    text(pg, "CHECK", M, y, { size: 7.5, f: bold, c: FAINT });
+    text(pg, "RESULT", M + 250, y, { size: 7.5, f: bold, c: FAINT });
+    y -= 10;
+    rule(pg, y);
+    for (const c of checks) {
+      y -= 26;
+      if (c.status === "warn") {
+        pg.drawCircle({ x: M + 6, y: y + 3, size: 7.5, color: tint([0.78, 0.5, 0.06], 0.12), borderColor: tint([0.78, 0.5, 0.06], 0.5), borderWidth: 0.6 });
+        text(pg, "!", M + 4.6, y - 0.2, { size: 8.5, f: bold, c: [0.78, 0.5, 0.06] });
+      } else mark(pg, c.status === "pass", M, y);
+      text(pg, c.label, M + 22, y + 0.5, { size: 9.5, f: bold, c: INK });
+      text(pg, wrap(c.detail, W - M - (M + 250), 8.5)[0] ?? "", M + 250, y + 0.5, { size: 8.5, c: c.status === "fail" ? RED : MUTED });
+      y -= 8;
+      rule(pg, y);
+    }
+    y -= 18;
+    para(pg, `Checked ${new Date(tech.checked_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} from our servers, acting as GPTBot, ClaudeBot and PerplexityBot. ${b.agency_name} can fix most of these in a day.`, M, y, W - 2 * M, { size: 8.5, c: FAINT });
   }
 
   return await doc.save();

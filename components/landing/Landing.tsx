@@ -97,9 +97,9 @@ function Hero({ cta }: { cta: { href: string; label: string } }) {
           <Reveal delay={240}>
             <div className="flex flex-wrap justify-center gap-2 mt-8">
               <Link href={cta.href} className="btn btn-primary btn-large">{cta.label} <ArrowRight size={15} /></Link>
-              <a href="#how" className="btn btn-large">See how it works</a>
+              <Link href="/start" className="btn btn-large btn-blue">Get 1 client audit + 5 leads free</Link>
             </div>
-            <p className="text-faint mt-4">14-day trial · 3 seats included · No card needed</p>
+            <p className="text-faint mt-4">14-day trial · 3 seats included · No card needed · <a href="#how" className="underline underline-offset-2 hover:text-ink">See how it works</a></p>
           </Reveal>
         </div>
 

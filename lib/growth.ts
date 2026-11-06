@@ -20,10 +20,16 @@ type Growth = {
   runStrategy(input: StrategyInput): Promise<string>;
   retry(auditId: string): Promise<void>;
   updateLead(id: string, patch: Partial<Pick<Lead, "status" | "notes">>): Promise<void>;
+  startSprint(input: { client_url: string; niche: string; location: string; region: string }): Promise<void>;
+  selfAudit(): Promise<string>;
+  runSprintQueue(): void;
   reset(): void;
 };
 
 let unwatch: (() => void) | null = null;
+let sprintRunning = false;
+const inFlight = new Set<string>();
+// The list keeps the small columns (tech, business) and drops the large ones.
 const strip = (a: Audit): Audit => ({ ...a, report: {}, hub: {}, assets: {} });
 
 export const useGrowth = create<Growth>((set, get) => ({
@@ -76,13 +82,50 @@ export const useGrowth = create<Growth>((set, get) => ({
     return audit_id;
   },
   async retry(auditId) {
-    await repo.retryStrategy(get().agencyId!, auditId);
+    // A sprint audit that didn't finish re-runs its quick check; anything else builds the full pack.
+    const a = get().audits.find((x) => x.id === auditId);
+    if (a?.source === "sprint" && a.status !== "complete") await repo.runLite(get().agencyId!, auditId);
+    else await repo.retryStrategy(get().agencyId!, auditId);
     await get().loadAudit(auditId);
   },
   async updateLead(id, patch) {
     const prev = get().leads;
     set({ leads: prev.map((l) => (l.id === id ? { ...l, ...patch } : l)) });
     try { await repo.updateLead(id, patch); } catch (e) { set({ leads: prev }); throw e; }
+  },
+  async startSprint(input) {
+    await repo.startSprint(get().agencyId!, input);
+    set({ audits: await repo.audits(get().agencyId!) });
+    get().runSprintQueue();
+  },
+  async selfAudit() {
+    const id = await repo.selfAudit(get().agencyId!);
+    set({ audits: await repo.audits(get().agencyId!) });
+    get().runSprintQueue();
+    return id;
+  },
+  // Sprint audits are created queued; their AI checks run here, two at a time (each makes ~8 engine
+  // calls and DataForSEO allows 30 at once). Survives navigation; resumes on the next load if the tab closed.
+  runSprintQueue() {
+    if (sprintRunning) return;
+    sprintRunning = true;
+    const agencyId = get().agencyId!;
+    const waitFor = async (id: string) => {
+      for (let t = 0; t < 120; t++) {
+        await new Promise((r) => setTimeout(r, 2500));
+        const a = (await repo.audits(agencyId)).find((x) => x.id === id);
+        if (!a || a.status === "complete" || a.status === "failed") { set({ audits: await repo.audits(agencyId) }); return; }
+      }
+    };
+    const next = () => get().audits.find((a) => a.source === "sprint" && a.status === "queued" && !inFlight.has(a.id));
+    const worker = async () => {
+      for (let a = next(); a; a = next()) {
+        inFlight.add(a.id);
+        try { await repo.runLite(agencyId, a.id); await waitFor(a.id); }
+        catch { set({ audits: await repo.audits(agencyId) }); }
+      }
+    };
+    Promise.all([worker(), worker()]).finally(() => { sprintRunning = false; });
   },
   reset() {
     unwatch?.();

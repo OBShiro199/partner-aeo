@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowClockwise, Check, Copy, FilePdf, PresentationChart, Sparkle, UserPlus, Warning } from "@phosphor-icons/react";
+import { ArrowClockwise, Check, Copy, FilePdf, LockSimple, PresentationChart, Sparkle, UserPlus, Warning } from "@phosphor-icons/react";
 import { ENGINE_LABEL, RISK_LABEL, type ProspectReport } from "@/supabase/functions/_shared/audit.ts";
 import { brandVariants } from "@/supabase/functions/_shared/analyse";
 import { EngineLogo } from "@/lib/engines";
@@ -14,8 +14,13 @@ import { faviconFor } from "@/lib/format";
 import { AnswerText } from "@/components/AnswerText";
 import { Button, cx, Favicon, LiveStatus, Sparkline } from "@/components/ui";
 import { ScoreGauge } from "./ScoreGauge";
+import { TechTab } from "./TechTab";
+import { LockBadge, useUpgrade } from "./Upgrade";
+import { isTrial, type Feature } from "@/lib/plan";
 
-const TABS = ["Report", "Blueprint", "Sentiment", "Sales kit", "Answers"] as const;
+const TABS = ["Report", "AI readiness", "Blueprint", "Sentiment", "Sales kit", "Answers"] as const;
+// Tabs that need a paid plan, and the upgrade pitch each one opens.
+const LOCKED: Partial<Record<(typeof TABS)[number], Feature>> = { Blueprint: "blueprint", Sentiment: "blueprint", "Sales kit": "sales_kit" };
 type Tab = (typeof TABS)[number];
 
 const LITE_STAGES = ["Reading", "Writing buyer prompts", "Asking ChatGPT, Perplexity, Gemini and Claude"];
@@ -36,6 +41,10 @@ export function AuditView({ audit, agency, widget, onRetry }: { audit: Audit; ag
   const hasReport = !!r?.prospect;
   const running = (audit.status === "running" || audit.status === "queued") && !isStuck(audit);
   const brand = { agency, widget };
+  const trial = isTrial(agency);
+  const upgrade = useUpgrade((u) => u.show);
+  const hasTech = !!(audit.tech as { checks?: unknown[] })?.checks?.length;
+  const tabs = TABS.filter((t) => t !== "AI readiness" || hasTech);
 
   async function act(key: string, fn: () => Promise<void>) {
     setBusy(key);
@@ -64,8 +73,8 @@ export function AuditView({ audit, agency, widget, onRetry }: { audit: Audit; ag
             <Button size="compact" disabled={!hasReport} loading={busy === "pdf"} onClick={() => act("pdf", () => downloadReportPdf(audit, brand))}>
               <FilePdf size={14} /> Prospect PDF
             </Button>
-            <Button size="compact" variant="blue" disabled={!hasReport} loading={busy === "deck"} onClick={() => act("deck", () => downloadDeck(audit, brand))}>
-              <PresentationChart size={14} /> Closing deck (.pptx)
+            <Button size="compact" variant="blue" disabled={!hasReport} loading={busy === "deck"} onClick={() => trial ? upgrade("deck") : act("deck", () => downloadDeck(audit, brand))}>
+              {trial ? <LockSimple size={14} /> : <PresentationChart size={14} />} {trial ? "Compile pitch deck" : "Closing deck (.pptx)"}
             </Button>
           </div>
         </div>
@@ -83,19 +92,21 @@ export function AuditView({ audit, agency, widget, onRetry }: { audit: Audit; ag
       {hasReport && (
         <>
           <div className="h-[44px] hair-b flex items-center gap-1 px-4 md:px-6 overflow-x-auto no-scrollbar" role="tablist">
-            {TABS.map((t) => (
+            {tabs.map((t) => (
               <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}
-                className={cx("h-[44px] px-2.5 -mb-px border-b-2 transition-colors whitespace-nowrap", tab === t ? "border-blue text-ink font-medium" : "border-transparent text-muted hover:text-ink")}>
-                {t}
+                className={cx("h-[44px] px-2.5 -mb-px border-b-2 transition-colors whitespace-nowrap inline-flex items-center gap-1.5", tab === t ? "border-blue text-ink font-medium" : "border-transparent text-muted hover:text-ink")}>
+                {t}{trial && LOCKED[t] && <LockBadge />}
               </button>
             ))}
             <span className="ml-auto text-faint whitespace-nowrap pl-4 tnum">{audit.cached_from ? "Reused a scan from this week" : `API cost ${usd(Number(audit.cost_usd), 3)}`}</span>
           </div>
           <div key={tab} className="rise">
             {tab === "Report" && <ReportTab audit={audit} r={r} color={widget?.brand_color} />}
-            {tab === "Blueprint" && (audit.depth === "full" ? <BlueprintTab audit={audit} /> : <Upgrade audit={audit} running={running} busy={busy === "retry"} onRun={() => act("retry", onRetry)} what="the 25-prompt blueprint" />)}
-            {tab === "Sentiment" && (audit.hub.sentiment ? <SentimentTab audit={audit} /> : <Upgrade audit={audit} running={running} busy={busy === "retry"} onRun={() => act("retry", onRetry)} what="the sentiment read" />)}
-            {tab === "Sales kit" && (audit.assets.cold_email ? <KitTab audit={audit} /> : <Upgrade audit={audit} running={running} busy={busy === "retry"} onRun={() => act("retry", onRetry)} what="the sales kit" />)}
+            {tab === "AI readiness" && hasTech && <TechTab audit={audit} />}
+            {trial && LOCKED[tab] && <LockedPanel feature={LOCKED[tab]!} onUnlock={() => upgrade(LOCKED[tab]!)} />}
+            {!(trial && LOCKED[tab]) && tab === "Blueprint" && (audit.depth === "full" ? <BlueprintTab audit={audit} /> : <Upgrade audit={audit} running={running} busy={busy === "retry"} onRun={() => act("retry", onRetry)} what="the 25-prompt blueprint" />)}
+            {!(trial && LOCKED[tab]) && tab === "Sentiment" && (audit.hub.sentiment ? <SentimentTab audit={audit} /> : <Upgrade audit={audit} running={running} busy={busy === "retry"} onRun={() => act("retry", onRetry)} what="the sentiment read" />)}
+            {!(trial && LOCKED[tab]) && tab === "Sales kit" && (audit.assets.cold_email ? <KitTab audit={audit} /> : <Upgrade audit={audit} running={running} busy={busy === "retry"} onRun={() => act("retry", onRetry)} what="the sales kit" />)}
             {tab === "Answers" && <AnswersTab audit={audit} />}
           </div>
         </>
@@ -123,6 +134,21 @@ function Progress({ audit }: { audit: Audit }) {
           ))}
         </ol>
         <p className="text-faint mt-4">Takes one to three minutes. You can leave this page; it keeps running.</p>
+      </div>
+    </div>
+  );
+}
+
+function LockedPanel({ feature, onUnlock }: { feature: Feature; onUnlock: () => void }) {
+  const copy = { blueprint: "The 25-prompt blueprint, sentiment read and target citations", sales_kit: "The cold email, call script and slide-by-slide closing script" } as Record<string, string>;
+  return (
+    <div className="relative overflow-hidden grid place-items-center text-center px-6 py-16">
+      <div className="absolute inset-0 grid-bg grid-fade opacity-80" aria-hidden />
+      <div className="relative max-w-[400px] flex flex-col items-center gap-3">
+        <div className="size-10 rounded-md border border-blue-edge bg-blue-soft grid place-items-center text-blue-ink"><LockSimple size={18} /></div>
+        <h3 className="t-14 font-medium text-ink">{copy[feature] ?? "This part of the pack"} are on paid plans</h3>
+        <p className="text-muted">Your trial includes the full report and the branded PDF for this business. Upgrade to turn it into a pitch.</p>
+        <Button variant="blue" onClick={onUnlock}><Sparkle size={14} /> Unlock</Button>
       </div>
     </div>
   );

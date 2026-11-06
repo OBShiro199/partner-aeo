@@ -148,3 +148,41 @@ export async function llmMentions(domain: string, locationCode: number, limit = 
   })).filter((i) => i.question);
   return { ...r, total: res?.total_count ?? null, items };
 }
+
+// Google Maps results for a local search ("roofing contractors in Denver, CO"). Measured: $0.002 for 20.
+// Free-text city names aren't valid DataForSEO locations, so the city rides in the keyword and the
+// location is the country.
+export type MapsBusiness = {
+  title: string; domain: string | null; url: string | null; phone: string | null; address: string | null;
+  rating: number | null; votes: number | null; category: string | null; rank: number; claimed: boolean | null; directory: boolean;
+};
+export async function mapsSearch(keyword: string, locationCode: number, depth = 20) {
+  const header = auth();
+  if (!header) throw new Error("DataForSEO credentials are not set");
+  const started = Date.now();
+  const res = await fetch("https://api.dataforseo.com/v3/serp/google/maps/live/advanced", {
+    method: "POST",
+    headers: { Authorization: header, "Content-Type": "application/json" },
+    body: JSON.stringify([{ keyword, location_code: locationCode, language_code: "en", depth }]),
+    signal: AbortSignal.timeout(60_000),
+  });
+  const body = await res.json().catch(() => ({}));
+  const t = body?.tasks?.[0];
+  const items = ((t?.result?.[0]?.items ?? []) as Record<string, unknown>[]).filter((i) => i.type === "maps_search");
+  const rating = (i: Record<string, unknown>) => (i.rating as { value?: number; votes_count?: number } | null) ?? null;
+  return {
+    ok: res.ok && t?.status_code === 20000,
+    http_status: res.status,
+    status_code: t?.status_code ?? body?.status_code ?? null,
+    status_message: t?.status_message ?? body?.status_message ?? res.statusText,
+    cost_usd: Number(t?.cost ?? 0),
+    ms: Date.now() - started,
+    businesses: items.map((i): MapsBusiness => ({
+      title: String(i.title ?? ""), domain: typeof i.domain === "string" ? i.domain.replace(/^www\./, "").toLowerCase() : null,
+      url: typeof i.url === "string" ? i.url : null, phone: typeof i.phone === "string" ? i.phone : null,
+      address: typeof i.address === "string" ? i.address : null, rating: rating(i)?.value ?? null, votes: rating(i)?.votes_count ?? null,
+      category: typeof i.category === "string" ? i.category : null, rank: Number(i.rank_group ?? 0),
+      claimed: typeof i.is_claimed === "boolean" ? i.is_claimed : null, directory: i.is_directory_item === true,
+    })),
+  };
+}

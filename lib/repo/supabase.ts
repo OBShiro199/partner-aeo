@@ -246,10 +246,10 @@ export const supabaseRepo: Repo = {
   async audits(agencyId) {
     // The list doesn't need the raw answers; they can run to hundreds of KB.
     const { data, error } = await db().from("audits")
-      .select("id, agency_id, widget_id, source, depth, prospect_domain, prospect_name, keyword, competitor_domain, competitor_name, region, status, stage, score, risk, deflection_rate, cost_usd, error, cached_from, host, created_at, started_at, finished_at")
+      .select("id, agency_id, widget_id, source, sprint_role, depth, prospect_domain, prospect_name, keyword, competitor_domain, competitor_name, region, status, stage, score, risk, deflection_rate, cost_usd, error, cached_from, host, tech, business, created_at, started_at, finished_at")
       .eq("agency_id", agencyId).order("created_at", { ascending: false }).limit(200);
     fail(error);
-    return (data ?? []).map((a) => ({ ...a, report: {}, hub: {}, assets: {} })) as Audit[];
+    return (data ?? []).map((a) => ({ ...a, tech: a.tech ?? {}, business: a.business ?? {}, report: {}, hub: {}, assets: {} })) as Audit[];
   },
   async audit(id) {
     const { data, error } = await db().from("audits").select("*").eq("id", id).maybeSingle();
@@ -258,6 +258,15 @@ export const supabaseRepo: Repo = {
   },
   async runStrategy(agencyId, input) {
     return call<{ audit_id: string; overage?: boolean }>("strategy-run", { agency_id: agencyId, ...input });
+  },
+  async startSprint(agencyId, input) {
+    return call<{ client_id: string | null; lead_ids: string[]; existing?: boolean }>("sprint", { agency_id: agencyId, action: "start", ...input });
+  },
+  async selfAudit(agencyId) {
+    return (await call<{ audit_id: string }>("sprint", { agency_id: agencyId, action: "self" })).audit_id;
+  },
+  async runLite(agencyId, auditId) {
+    await call("strategy-run", { agency_id: agencyId, audit_id: auditId, depth: "lite" });
   },
   async retryStrategy(agencyId, auditId) {
     await call("strategy-run", { agency_id: agencyId, audit_id: auditId });

@@ -71,6 +71,10 @@ export interface Repo {
   deleteAudit(id: string): Promise<void>;
   leads(agencyId: string): Promise<Lead[]>;
   updateLead(id: string, patch: Partial<Pick<Lead, "status" | "notes">>): Promise<void>;
+  // The free trial sprint: client audit + 5 local leads, the agency's own audit, a free technical check.
+  startSprint(agencyId: string, input: { client_url: string; niche: string; location: string; region: string }): Promise<{ client_id: string | null; lead_ids: string[]; existing?: boolean }>;
+  selfAudit(agencyId: string): Promise<string>;
+  runLite(agencyId: string, auditId: string): Promise<void>;
   // Live updates for audits and leads in this agency. Returns an unsubscribe function.
   watchGrowth(agencyId: string, cb: (e: { table: "audits"; row: Audit } | { table: "leads"; row: Lead }) => void): () => void;
 }

@@ -8,6 +8,7 @@ import { fetchSite, htmlToText, logUsage } from "./common.ts";
 import { extractDfs } from "./analyse.ts";
 import { aiKeywordVolume, llmMentions, llmResponse, type DfsEngine } from "./dataforseo.ts";
 import { haikuJson } from "./haiku.ts";
+import { runTechAudit, type TechAudit } from "./tech-audit.ts";
 import {
   buildReport, cellFromAnswer, citationMap, DECK_SLIDES, ENGINE_LABEL, LOCATION_CODES, nameFromTitle,
   type Brand, type Cell, type Hub, type MentionSummary, type SalesKit, type Sentiment, type Variation,
@@ -20,7 +21,7 @@ const INTENTS = ["best_for", "problem", "comparison", "local", "other"] as const
 type Audit = {
   id: string; agency_id: string; depth: "lite" | "full"; prospect_domain: string; prospect_name: string | null;
   keyword: string; competitor_domain: string | null; competitor_name: string | null; region: string;
-  report: Record<string, unknown>; hub: Hub; assets: SalesKit; cost_usd: number;
+  report: Record<string, unknown>; hub: Hub; assets: SalesKit; cost_usd: number; tech: TechAudit | Record<string, never> | null;
 };
 
 export async function dfsRemaining(db: SupabaseClient): Promise<number> {
@@ -255,10 +256,14 @@ export async function runAudit(db: SupabaseClient, auditId: string, depth: "lite
 
   try {
     await db.from("audits").update({ status: "running", stage: `Reading ${a.prospect_domain}`, started_at: new Date().toISOString(), error: null }).eq("id", auditId);
-    const [p, c] = await Promise.all([
+    // The technical AI-readiness check is free (plain HTTP), so every audit gets one if it hasn't yet.
+    const needsTech = !(a.tech as TechAudit | null)?.checks?.length;
+    const [p, c, tech] = await Promise.all([
       siteBrand(a.prospect_domain, a.prospect_name),
       a.competitor_domain ? siteBrand(a.competitor_domain, a.competitor_name) : Promise.resolve(null),
+      needsTech ? runTechAudit(a.prospect_domain).catch(() => null) : Promise.resolve(null),
     ]);
+    if (tech) await db.from("audits").update({ tech }).eq("id", auditId);
     const prospect = p.brand;
     const competitor = c?.brand ?? null;
 

@@ -9,6 +9,8 @@ import type { Widget } from "@/lib/types";
 import { Toolbar } from "@/components/shell/Toolbar";
 import { RegionSelect } from "@/components/pickers";
 import { Button, cx, Empty, Field, Meter } from "@/components/ui";
+import { isTrial } from "@/lib/plan";
+import { LockedPage } from "@/components/growth/LockedPage";
 
 const SWATCHES = ["#5f86e0", "#2f7d6d", "#7a5af8", "#e0567a", "#d97706", "#0f766e", "#111827"];
 const INSTALL = ["HTML", "React", "Webflow", "iframe"] as const;
@@ -20,6 +22,7 @@ export default function WidgetPage() {
   const [creating, setCreating] = useState(false);
 
   if (!g.loaded) return <><Toolbar><span className="text-ink font-medium">Lead widget</span></Toolbar><div className="p-6"><div className="skeleton h-5 w-1/3" /></div></>;
+  if (isTrial(s.agency)) return <><Toolbar><span className="text-ink font-medium">Lead widget</span><span className="tag">Paid plans</span></Toolbar><LockedPage feature="widget" /></>;
 
   if (!g.widget) {
     return (

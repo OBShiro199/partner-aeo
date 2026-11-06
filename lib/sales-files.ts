@@ -3,7 +3,7 @@
 // the editable closing deck (.pptx, opens in PowerPoint, Keynote and Google Slides)
 // and the same white-label PDF the prospect received.
 import { DECK_SLIDES, ENGINE_LABEL, RISK_LABEL, type ProspectReport } from "@/supabase/functions/_shared/audit.ts";
-import type { Agency, Audit, Widget } from "./types";
+import type { Agency, Audit, TechAudit, Widget } from "./types";
 
 type Brand = { agency: Agency; widget: Widget | null };
 
@@ -36,7 +36,7 @@ export async function downloadReportPdf(audit: Audit, { agency, widget }: Brand)
     agency_name: agency.name, brand_color: widget?.brand_color ?? "#5f86e0", logo: logo?.bytes, logo_type: logo?.type,
     contact_name: widget?.contact_name, contact_email: widget?.contact_email, contact_phone: widget?.contact_phone,
     booking_url: widget?.booking_url, website: agency.domain,
-  });
+  }, (audit.tech as TechAudit)?.checks?.length ? (audit.tech as TechAudit) : null);
   save(new Blob([bytes as BlobPart], { type: "application/pdf" }), `AI-search-report-${fileSafe(audit.prospect_domain)}.pdf`);
 }
 

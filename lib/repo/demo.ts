@@ -371,6 +371,9 @@ export const demoRepo: Repo = {
   async deleteAudit() {},
   async leads() { return []; },
   async updateLead() {},
+  async startSprint() { throw new Error(NEEDS_SUPABASE); },
+  async selfAudit() { throw new Error(NEEDS_SUPABASE); },
+  async runLite() { throw new Error(NEEDS_SUPABASE); },
   watchGrowth() { return () => {}; },
 };
 

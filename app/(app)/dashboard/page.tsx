@@ -12,6 +12,8 @@ import { Bar, TrendChart } from "@/components/charts";
 import { Tour, useTour } from "@/components/Tour";
 import { Button, cx, Delta, Empty, Favicon, LiveStatus, Menu, Sparkline } from "@/components/ui";
 import { Outcome as OutcomeDot } from "@/components/outcome";
+import { useGrowth } from "@/lib/growth";
+import { isTrial } from "@/lib/plan";
 
 export default function Dashboard() {
   const s = useApp();
@@ -40,6 +42,7 @@ export default function Dashboard() {
     return (
       <>
         <Toolbar><span className="text-ink font-medium">Dashboard</span></Toolbar>
+        <SprintBanner />
         <Empty
           icon={<UsersThree size={18} />}
           title="Add your first client"
@@ -82,6 +85,7 @@ export default function Dashboard() {
           ))}
         </div>
       </Toolbar>
+      <SprintBanner />
 
       <div className="flex-1">
         {/* Header */}
@@ -474,5 +478,19 @@ function Checklist({ onTour }: { onTour: () => void }) {
       </ul>
       <button className="text-faint hover:text-ink self-start lg:self-center" onClick={() => { localStorage.setItem("paeo-checklist-hidden", "1"); setHidden(true); }}>Hide</button>
     </section>
+  );
+}
+
+// Until a trial agency has run its free audits, the dashboard points them there.
+function SprintBanner() {
+  const agency = useApp((s) => s.agency);
+  const g = useGrowth();
+  if (!g.loaded || !isTrial(agency) || g.audits.some((a) => a.sprint_role === "client")) return null;
+  return (
+    <Link href="/sprint" className="mx-4 md:mx-6 mt-4 card px-4 py-3 flex items-center gap-3 border-blue-edge bg-blue-soft/50 hover:bg-blue-soft transition-colors">
+      <span className="live-dot" />
+      <span className="flex-1 min-w-0"><span className="text-ink font-medium">Your free audits are waiting.</span> <span className="text-muted">1 client audit and 5 local leads, with branded PDFs.</span></span>
+      <span className="text-blue-ink font-medium inline-flex items-center gap-1 whitespace-nowrap">Get them <ArrowRight size={14} /></span>
+    </Link>
   );
 }

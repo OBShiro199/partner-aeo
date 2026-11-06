@@ -11,6 +11,8 @@ import { Toolbar } from "@/components/shell/Toolbar";
 import { RegionSelect } from "@/components/pickers";
 import { isStuck, RiskTag } from "@/components/growth/AuditView";
 import { Button, cx, Empty, Favicon, Field, LiveStatus, Meter } from "@/components/ui";
+import { isTrial } from "@/lib/plan";
+import { useUpgrade } from "@/components/growth/Upgrade";
 
 const WHAT = [
   { Icon: TreeStructure, title: "25 prompt variations", body: "The questions buyers ask AI, with monthly AI search volume from DataForSEO." },
@@ -29,9 +31,13 @@ export default function StrategyPage() {
   const c = g.credits?.strategy_runs;
   const left = c ? c.allowance - c.used : null;
 
+  const trial = isTrial(s.agency);
+  const upgrade = useUpgrade((u) => u.show);
+
   async function run(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
+    if (trial) return upgrade("strategy");
     const domain = normaliseDomain(f.domain);
     const competitor = f.competitor.trim() ? normaliseDomain(f.competitor) : null;
     if (!domain) return setErr("Enter the prospect's website, like acme.com.");
@@ -66,7 +72,7 @@ export default function StrategyPage() {
             </div>
             <p role="alert" className="field-error mt-3">{err}</p>
             <div className="flex items-center gap-3 mt-3 flex-wrap">
-              <Button type="submit" variant="primary" size="large" loading={busy} disabled={isDemo}><Strategy size={16} className="text-blue" /> Run analysis</Button>
+              <Button type="submit" variant="primary" size="large" loading={busy} disabled={isDemo}><Strategy size={16} className="text-blue" /> {trial ? "Run analysis (paid plans)" : "Run analysis"}</Button>
               <span className="text-faint">{left == null ? "" : left > 0 ? `Uses 1 of ${left} runs left this month` : g.credits?.overage_enabled ? `Over your allowance: $${c!.overage_usd.toFixed(2)} per run` : "No runs left this month"}</span>
             </div>
           </form>

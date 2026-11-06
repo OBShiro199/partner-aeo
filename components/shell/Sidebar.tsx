@@ -1,14 +1,16 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { SquaresFour, UsersThree, CreditCard, GearSix, Plus, CaretUpDown, SignOut, Flask, Tray, Strategy, Code, MagnifyingGlass } from "@phosphor-icons/react";
+import { SquaresFour, UsersThree, CreditCard, GearSix, Plus, CaretUpDown, SignOut, Flask, Tray, Strategy, Code, MagnifyingGlass, Gift, LockSimple } from "@phosphor-icons/react";
 import { useApp } from "@/lib/store";
 import { useGrowth } from "@/lib/growth";
 import { isDemo } from "@/lib/repo";
+import { isTrial } from "@/lib/plan";
 import { cx, Favicon, Kbd, Menu, modKey } from "../ui";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", Icon: SquaresFour, tour: "nav-dashboard" },
+  { href: "/sprint", label: "Free audits", Icon: Gift, tour: "nav-sprint" },
   { href: "/clients", label: "Clients", Icon: UsersThree, tour: "nav-clients" },
   { href: "/leads", label: "Leads", Icon: Tray, tour: "nav-leads" },
   { href: "/strategy", label: "Strategy Engine", Icon: Strategy, tour: "nav-strategy" },
@@ -29,6 +31,7 @@ export function Sidebar() {
   const openAdd = useApp((s) => s.setAddClientOpen);
   const signOut = useApp((s) => s.signOut);
   const newLeads = useGrowth((g) => g.leads.filter((l) => l.status === "new").length);
+  const trial = isTrial(agency);
 
   return (
     <aside className="sticky top-0 h-dvh w-[56px] min-[1100px]:w-[240px] flex-none hair-r bg-surface flex flex-col z-[90]">
@@ -97,6 +100,7 @@ export function Sidebar() {
             >
               <Icon size={17} weight={active ? "duotone" : "regular"} color={active ? "var(--blue)" : undefined} />
               <span className="hidden min-[1100px]:inline">{label}</span>
+              {trial && (href === "/strategy" || href === "/widget") && <LockSimple size={12} className="hidden min-[1100px]:inline ml-auto text-faint" aria-label="Paid plans" />}
               {href === "/leads" && newLeads > 0 && <span className="hidden min-[1100px]:inline ml-auto tag tag-blue tnum h-5 px-1.5">{newLeads}</span>}
             </Link>
           );

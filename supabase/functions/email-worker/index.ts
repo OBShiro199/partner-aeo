@@ -158,7 +158,7 @@ async function buildDigest(db: any, agencyId: string): Promise<T.DigestData> {
 // deno-lint-ignore no-explicit-any
 async function prospectEmail(db: any, auditId: string, agencyId: string, firstName: string | null) {
   const [{ data: a }, { data: w }, { data: ag }] = await Promise.all([
-    db.from("audits").select("report, host").eq("id", auditId).maybeSingle(),
+    db.from("audits").select("report, host, tech").eq("id", auditId).maybeSingle(),
     db.from("widgets").select("*").eq("agency_id", agencyId).maybeSingle(),
     db.from("agencies").select("name, domain, website, favicon_url").eq("id", agencyId).maybeSingle(),
   ]);
@@ -170,7 +170,7 @@ async function prospectEmail(db: any, auditId: string, agencyId: string, firstNa
     agency_name: ag.name, brand_color: w?.brand_color ?? "#5f86e0", logo: logo?.bytes, logo_type: logo?.type,
     contact_name: w?.contact_name, contact_email: w?.contact_email, contact_phone: w?.contact_phone,
     booking_url: w?.booking_url, website: ag.domain,
-  });
+  }, a?.tech?.checks?.length ? a.tech : null);
   const invisible = report.prompts.filter((x) => !x.prospect_seen).length;
   const rendered = T.prospectReport({
     agency_name: ag.name, brand_color: w?.brand_color ?? "#5f86e0", logo_url: logoUrl, first_name: firstName,

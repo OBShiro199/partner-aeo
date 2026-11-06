@@ -7,6 +7,8 @@ import { useGrowth } from "@/lib/growth";
 export function GrowthLoader() {
   const agencyId = useApp((s) => s.agency?.id);
   const load = useGrowth((g) => g.load);
-  useEffect(() => { if (agencyId) load(agencyId).catch(() => {}); }, [agencyId, load]);
+  useEffect(() => {
+    if (agencyId) load(agencyId).then(() => useGrowth.getState().runSprintQueue()).catch(() => {});
+  }, [agencyId, load]);
   return null;
 }

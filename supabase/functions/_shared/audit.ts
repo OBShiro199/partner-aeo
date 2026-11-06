@@ -115,7 +115,9 @@ export function buildReport(cells: Cell[], o: { prospect: Brand; competitor: Bra
     score, risk: riskOf(score),
     deflection_rate: o.competitor && ok.length ? deflected / ok.length : null,
     answers: ok.length, engines, prompts,
-    gaps: citationMap(ok, o.prospect, o.competitor).filter((g) => !g.with_prospect).slice(0, 8)
+    // One row per site: the same domain cited on several pages reads as a duplicate to a prospect.
+    gaps: citationMap(ok, o.prospect, o.competitor).filter((g) => !g.with_prospect)
+      .filter((g, i, all) => all.findIndex((x) => x.domain === g.domain) === i).slice(0, 8)
       .map(({ engines: _e, ...g }) => g),
     generated_at: new Date().toISOString(),
   };

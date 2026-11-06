@@ -1,4 +1,5 @@
 import type { Hub, ProspectReport, SalesKit } from "../supabase/functions/_shared/audit.ts";
+import type { TechAudit } from "../supabase/functions/_shared/tech-audit.ts";
 export type Role = "owner" | "admin" | "member";
 export type Intent = "best_for" | "problem" | "comparison" | "local" | "other";
 export type ResultStatus = "pending" | "done" | "failed" | "skipped";
@@ -18,6 +19,8 @@ export type Agency = {
   monthly_budget_usd: number;
   onboarded_at: string | null;
   tour_completed_at: string | null;
+  sprint?: { client_url: string; niche: string; location: string; region?: string } | null;
+  sprint_used_at?: string | null;
   created_at: string;
 };
 
@@ -115,7 +118,7 @@ export type NewClientInput = {
 // ---------------------------------------------------------------------------
 // Growth: widget, audits (Strategy Engine), leads, credits
 // ---------------------------------------------------------------------------
-export type { Hub, ProspectReport, SalesKit };
+export type { Hub, ProspectReport, SalesKit, TechAudit };
 
 export type Widget = {
   id: string;
@@ -139,7 +142,10 @@ export type Audit = {
   id: string;
   agency_id: string;
   widget_id: string | null;
-  source: "widget" | "manual";
+  source: "widget" | "manual" | "sprint";
+  sprint_role: "client" | "lead" | "self" | null;
+  tech: TechAudit | Record<string, never>;
+  business: SprintBusiness | Record<string, never>;
   depth: "lite" | "full";
   prospect_domain: string;
   prospect_name: string | null;
@@ -163,6 +169,8 @@ export type Audit = {
   started_at: string | null;
   finished_at: string | null;
 };
+
+export type SprintBusiness = { name: string; phone: string | null; address: string | null; rating: number | null; votes: number | null; category: string | null; maps_rank: number; url: string | null; claimed: boolean | null };
 
 export type LeadStatus = "new" | "contacted" | "meeting" | "won" | "lost";
 export type Lead = {
