@@ -4,9 +4,9 @@ import Link from "next/link";
 import { ArrowRight, Buildings, Code, FilePdf, Gift, Lightning, LockSimple, MagnifyingGlass, MapPin, Phone, PresentationChart, Star, Wrench } from "@phosphor-icons/react";
 import { useApp } from "@/lib/store";
 import { useGrowth } from "@/lib/growth";
-import { isDemo } from "@/lib/repo";
-import { isTrial, type Feature } from "@/lib/plan";
-import { clearSprint, readSprint } from "@/lib/sprint";
+import { isDemo, repo } from "@/lib/repo";
+import { isTrial, TRIAL_DAYS, type Feature } from "@/lib/plan";
+import { clearSprint, readSprint, saveSprint } from "@/lib/sprint";
 import { downloadReportPdf } from "@/lib/sales-files";
 import { normaliseDomain } from "@/lib/format";
 import type { Audit, SprintBusiness, TechAudit } from "@/lib/types";
@@ -68,7 +68,23 @@ function Intake() {
   const [f, setF] = useState({ client_url: "", niche: "", location: "", region: s.agency!.regions.find((r) => r !== "GLOBAL") ?? "US" });
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [cardStep, setCardStep] = useState(false);
   useEffect(() => { const v = readSprint(); if (v) setF((x) => ({ ...x, ...v, region: v.region ?? x.region })); }, []);
+  useEffect(() => { repo.billingStatus(s.agency!.id).then((b) => setCardStep(b.require_card && !b.has_card)).catch(() => {}); }, [s.agency]);
+  // Back from Stripe Checkout with the card saved: start the audits they already asked for.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("checkout") !== "success") return;
+    window.history.replaceState(null, "", "/sprint");
+    const v = readSprint();
+    if (!v) return;
+    setBusy(true);
+    const run = (n: number): Promise<void> => g.startSprint({ client_url: v.client_url, niche: v.niche, location: v.location, region: v.region ?? f.region })
+      .then(() => { clearSprint(); s.toast("Card saved. Your audits are running."); })
+      // The webhook can land a second or two after the redirect.
+      .catch((e: Error) => (n > 0 && /free trial/i.test(e.message) ? new Promise<void>((r) => setTimeout(r, 2500)).then(() => run(n - 1)) : setErr(e.message)));
+    run(4).finally(() => setBusy(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function go(e: React.FormEvent) {
     e.preventDefault();
@@ -79,6 +95,12 @@ function Intake() {
     if (f.location.trim().length < 2) return setErr("Add a town or city, like \"Denver, CO\".");
     setBusy(true);
     try {
+      if (cardStep) {
+        // Card up front: keep the answers, start the Stripe trial, come back here to run.
+        saveSprint({ client_url: client, niche: f.niche.trim(), location: f.location.trim(), region: f.region });
+        const r = await repo.checkout(s.agency!.id, "starter", "/sprint");
+        if (r.url) { window.location.assign(r.url); return; }
+      }
       await g.startSprint({ client_url: client, niche: f.niche.trim(), location: f.location.trim(), region: f.region });
       clearSprint();
       s.toast("Audits started. They take a few minutes.");
@@ -90,8 +112,8 @@ function Intake() {
       <div className="absolute inset-0 grid-bg opacity-70" style={{ maskImage: "linear-gradient(to bottom, #000 40%, transparent)" }} aria-hidden />
       <form onSubmit={go} className="relative card m-4 md:m-6 p-5 md:p-7 max-w-[760px]" noValidate>
         <p className="text-blue-ink font-medium flex items-center gap-2"><Gift size={15} /> Free with your trial</p>
-        <h1 className="h2 mt-2">1 client audit + 5 local leads</h1>
-        <p className="text-muted mt-1 mb-6">We audit a client you already have, then find 5 businesses in your niche with weak AI visibility. Each comes with a branded PDF you can send today.</p>
+        <h1 className="h2 mt-2">1 client audit + 10 local leads</h1>
+        <p className="text-muted mt-1 mb-6">We audit a client you already have, then find 10 businesses in your niche with weak AI visibility. Each comes with a branded PDF you can send today.</p>
         <div className="grid sm:grid-cols-2 gap-4">
           <Field label="Your client's website" htmlFor="sp-c"><input id="sp-c" className="input" placeholder="clientdomain.com" value={f.client_url} onChange={(e) => setF({ ...f, client_url: e.target.value })} /></Field>
           <Field label="Niche for new leads" htmlFor="sp-n"><input id="sp-n" className="input" placeholder="e.g. roofing contractors" maxLength={60} value={f.niche} onChange={(e) => setF({ ...f, niche: e.target.value })} /></Field>
@@ -100,9 +122,9 @@ function Intake() {
         </div>
         <p role="alert" className="field-error mt-3">{err}</p>
         <Button type="submit" variant="primary" size="large" loading={busy} disabled={isDemo} className="mt-2">
-          Generate my free audits <ArrowRight size={15} className="text-blue" />
+          {cardStep ? "Start free trial and run audits" : "Generate my free audits"} <ArrowRight size={15} className="text-blue" />
         </Button>
-        <p className="text-faint mt-3">One free run per agency. It takes a few minutes; you can leave this page.</p>
+        <p className="text-faint mt-3">{cardStep ? `${TRIAL_DAYS}-day free trial, $0 today. Add a card on the next page, then your audits start straight away.` : "One free run per agency. It takes a few minutes; you can leave this page."}</p>
       </form>
     </section>
   );
@@ -192,7 +214,7 @@ function MoreLeads() {
   if (!isTrial(s.agency)) return null;
   return (
     <button onClick={() => show("more_leads")} className="mt-3 w-full max-w-[560px] h-10 px-3 rounded-md border border-dashed border-btn-edge text-muted hover:text-ink flex items-center gap-2 text-left">
-      <MagnifyingGlass size={15} /><span className="flex-1">Search another niche or location</span><span className="tag">5/5 trial leads used</span><LockSimple size={13} />
+      <MagnifyingGlass size={15} /><span className="flex-1">Search another niche or location</span><span className="tag">10/10 trial leads used</span><LockSimple size={13} />
     </button>
   );
 }

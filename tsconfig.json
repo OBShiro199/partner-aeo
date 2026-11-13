@@ -31,5 +31,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "supabase/functions/*/index.ts", "supabase/functions/_shared/common.ts", "supabase/functions/_shared/dataforseo.ts", "supabase/functions/_shared/haiku.ts", "supabase/functions/_shared/strategy.ts", "supabase/functions/_shared/public.ts"]
+  "exclude": ["node_modules", "supabase/functions/*/index.ts", "supabase/functions/_shared/common.ts", "supabase/functions/_shared/dataforseo.ts", "supabase/functions/_shared/haiku.ts", "supabase/functions/_shared/strategy.ts", "supabase/functions/_shared/public.ts", "supabase/functions/_shared/stripe.ts", "supabase/functions/_shared/billing-sync.ts"]
 }

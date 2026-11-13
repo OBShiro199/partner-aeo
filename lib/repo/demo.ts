@@ -374,6 +374,9 @@ export const demoRepo: Repo = {
   async startSprint() { throw new Error(NEEDS_SUPABASE); },
   async selfAudit() { throw new Error(NEEDS_SUPABASE); },
   async runLite() { throw new Error(NEEDS_SUPABASE); },
+  async billingStatus() { return { configured: false, require_card: false, has_card: false, trial_days: 7, plan: "trial", subscription_status: null, subscribed_plan: null, trial_ends_at: null, current_period_end: null, cancel_at_period_end: false }; },
+  async checkout() { throw new Error(NEEDS_SUPABASE); },
+  async billingPortal() { throw new Error(NEEDS_SUPABASE); },
   watchGrowth() { return () => {}; },
 };
 

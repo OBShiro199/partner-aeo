@@ -1,7 +1,7 @@
 // Signed in. The free trial sprint, and the free technical check.
 // POST { agency_id, action: "start", client_url, niche, location, region } -> { client_id, lead_ids }
 //   Finds local businesses on Google Maps, runs the technical audit on the agency's client and on
-//   each candidate, and keeps the five weakest as prospects. Creates queued audits; the app then runs
+//   each candidate, and keeps the ten weakest as prospects. Creates queued audits; the app then runs
 //   their AI answer checks one by one through strategy-run (depth "lite"). Once per agency.
 // POST { agency_id, action: "self", keyword? } -> { audit_id }   the agency's own audit, once
 // POST { agency_id, action: "tech", domain }   -> TechAudit       a technical check only (free)
@@ -10,8 +10,8 @@ import { mapsSearch, type MapsBusiness } from "../_shared/dataforseo.ts";
 import { runTechAudit, type TechAudit } from "../_shared/tech-audit.ts";
 import { LOCATION_CODES } from "../_shared/audit.ts";
 
-const LEADS = 5;
-const CANDIDATES = 12;
+const LEADS = 10;
+const CANDIDATES = 20;
 // Listings that are directories or platforms rather than the business's own site.
 const NOT_A_BUSINESS_SITE = /(^|\.)(yelp|facebook|instagram|linkedin|google|angi|homeadvisor|thumbtack|bbb|yellowpages|nextdoor|houzz|porch|checkatrade|trustatrader|mybuilder|ratedpeople|bark|wix|squarespace|godaddysites|business\.site)\./;
 
@@ -32,7 +32,7 @@ Deno.serve(handle(async (req) => {
   const body = await req.json();
   const agencyId = String(body.agency_id ?? "");
   const role = await requireMember(db, agencyId, user.id);
-  const { data: agency } = await db.from("agencies").select("id, name, domain, regions, sprint, sprint_used_at").eq("id", agencyId).single();
+  const { data: agency } = await db.from("agencies").select("id, name, domain, regions, sprint, sprint_used_at, subscription_status").eq("id", agencyId).single();
   if (!agency) throw new HttpError(404, "Agency not found.");
 
   if (body.action === "tech") {
@@ -62,6 +62,12 @@ Deno.serve(handle(async (req) => {
     return json({ existing: true, client_id: rows?.find((r) => r.sprint_role === "client")?.id ?? null, lead_ids: (rows ?? []).filter((r) => r.sprint_role === "lead").map((r) => r.id) });
   }
 
+  // Card up front (platform switch, on once Stripe is live): the free audits start after checkout.
+  const { data: lim } = await db.from("platform_limits").select("require_card").eq("id", 1).single();
+  if (lim?.require_card && Deno.env.get("STRIPE_SECRET_KEY") && !["trialing", "active", "past_due"].includes(agency.subscription_status ?? "")) {
+    throw new HttpError(402, "Start your free trial to run the audits. It's $0 today.");
+  }
+
   const client = normaliseDomain(String(body.client_url ?? ""));
   const niche = String(body.niche ?? "").replace(/\s+/g, " ").trim().slice(0, 60);
   const location = String(body.location ?? "").replace(/\s+/g, " ").trim().slice(0, 60);
@@ -76,7 +82,7 @@ Deno.serve(handle(async (req) => {
   if (!claimed?.length) throw new HttpError(409, "Your free audits are already running.");
 
   try {
-    const maps = await mapsSearch(keyword, LOCATION_CODES[region] ?? 2840, 20);
+    const maps = await mapsSearch(keyword, LOCATION_CODES[region] ?? 2840, 40);
     await logUsage(db, { agency_id: agencyId, provider: "dataforseo", endpoint: "serp/google/maps/live/advanced", status: maps.ok ? "ok" : "error", http_status: maps.http_status, cost_usd: maps.cost_usd, meta: { keyword, ms: maps.ms, status_code: maps.status_code } });
     if (!maps.ok) throw new HttpError(502, `Couldn't search Google Maps right now (${maps.status_message}). Try again in a minute.`);
 

@@ -14,6 +14,7 @@ import { Button, cx, Delta, Empty, Favicon, LiveStatus, Menu, Sparkline } from "
 import { Outcome as OutcomeDot } from "@/components/outcome";
 import { useGrowth } from "@/lib/growth";
 import { isTrial } from "@/lib/plan";
+import { AgencyHealth } from "@/components/growth/AgencyHealth";
 
 export default function Dashboard() {
   const s = useApp();
@@ -43,6 +44,7 @@ export default function Dashboard() {
       <>
         <Toolbar><span className="text-ink font-medium">Dashboard</span></Toolbar>
         <SprintBanner />
+        <AgencyHealth />
         <Empty
           icon={<UsersThree size={18} />}
           title="Add your first client"
@@ -86,6 +88,7 @@ export default function Dashboard() {
         </div>
       </Toolbar>
       <SprintBanner />
+      <AgencyHealth />
 
       <div className="flex-1">
         {/* Header */}
@@ -489,7 +492,7 @@ function SprintBanner() {
   return (
     <Link href="/sprint" className="mx-4 md:mx-6 mt-4 card px-4 py-3 flex items-center gap-3 border-blue-edge bg-blue-soft/50 hover:bg-blue-soft transition-colors">
       <span className="live-dot" />
-      <span className="flex-1 min-w-0"><span className="text-ink font-medium">Your free audits are waiting.</span> <span className="text-muted">1 client audit and 5 local leads, with branded PDFs.</span></span>
+      <span className="flex-1 min-w-0"><span className="text-ink font-medium">Your free audits are waiting.</span> <span className="text-muted">1 client audit and 10 local leads, with branded PDFs.</span></span>
       <span className="text-blue-ink font-medium inline-flex items-center gap-1 whitespace-nowrap">Get them <ArrowRight size={14} /></span>
     </Link>
   );

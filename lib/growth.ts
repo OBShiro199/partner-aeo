@@ -95,6 +95,8 @@ export const useGrowth = create<Growth>((set, get) => ({
   },
   async startSprint(input) {
     await repo.startSprint(get().agencyId!, input);
+    // The agency's own audit runs alongside (once; skipped if they have no website on file).
+    await repo.selfAudit(get().agencyId!).catch(() => null);
     set({ audits: await repo.audits(get().agencyId!) });
     get().runSprintQueue();
   },

@@ -49,7 +49,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   return (
     <Gate need="anon">
       <div className="w-full max-w-[400px] card p-6 sm:p-8 rise" style={{ boxShadow: "0 1px 2px rgba(8,9,10,.04)" }}>
-        <p className="text-faint mb-1.5">{mode === "signup" ? (invited ? "You've been invited" : "Start a 14-day trial") : "Welcome back"}</p>
+        <p className="text-faint mb-1.5">{mode === "signup" ? (invited ? "You've been invited" : "Start a 7-day free trial") : "Welcome back"}</p>
         <h1 className="h2 mb-6">{mode === "signup" ? (invited ? "Join your team on Partner AEO" : "Create your agency workspace") : "Log in to Partner AEO"}</h1>
         {notice ? (
           <p className="text-body" role="status">{notice}</p>

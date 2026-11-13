@@ -10,6 +10,7 @@ import { cx } from "../ui";
 import { Counter, Marquee, Reveal, Scribble } from "./motion";
 import { HeroMock } from "./HeroMock";
 import { ScoreGauge } from "../growth/ScoreGauge";
+import { PLAN_CATALOG, planLines } from "@/lib/plan";
 
 const RAIL = "mx-auto w-full max-w-[1180px] border-x border-hairline";
 
@@ -97,9 +98,9 @@ function Hero({ cta }: { cta: { href: string; label: string } }) {
           <Reveal delay={240}>
             <div className="flex flex-wrap justify-center gap-2 mt-8">
               <Link href={cta.href} className="btn btn-primary btn-large">{cta.label} <ArrowRight size={15} /></Link>
-              <Link href="/start" className="btn btn-large btn-blue">Get 1 client audit + 5 leads free</Link>
+              <Link href="/start" className="btn btn-large btn-blue">Get 1 client audit + 10 leads free</Link>
             </div>
-            <p className="text-faint mt-4">14-day trial · 3 seats included · No card needed · <a href="#how" className="underline underline-offset-2 hover:text-ink">See how it works</a></p>
+            <p className="text-faint mt-4">7-day free trial · $0 today · Cancel any time · <a href="#how" className="underline underline-offset-2 hover:text-ink">See how it works</a></p>
           </Reveal>
         </div>
 
@@ -373,11 +374,7 @@ function Tenancy() {
   );
 }
 
-const PLANS = [
-  { n: "Starter", p: 149, c: "10 clients · 3 seats", f: ["4 live engines", "10 prompts per client", "Lead widget: 50 scans a month", "10 strategy runs a month"] },
-  { n: "Growth", p: 349, c: "30 clients · 10 seats", f: ["Everything in Starter", "Lead widget: 200 scans a month", "30 strategy runs a month", "White-label prospect reports"], pop: true },
-  { n: "Scale", p: 899, c: "100 clients · 50 seats", f: ["Everything in Growth", "Lead widget: 1,000 scans a month", "Twice-weekly scans", "API access and SSO*"] },
-];
+const PLANS = PLAN_CATALOG.map((p) => ({ n: p.name, p: p.price, c: `${p.clients} clients · ${p.seats} ${p.seats === 1 ? "seat" : "seats"}`, f: planLines(p).slice(0, 4), pop: p.popular }));
 
 // The growth side of the product: the scanner on the agency's own site, and what lands in the dashboard.
 function LeadEngine() {
@@ -425,7 +422,7 @@ function Pricing({ cta }: { cta: { href: string; label: string } }) {
   return (
     <section id="pricing" className="hair-b scroll-mt-14">
       <div className={cx(RAIL, "px-4 sm:px-6 py-20 sm:py-28")}>
-        <SectionHead center eyebrow="Pricing" title="Priced per agency, not per client" body="Every plan includes every live engine. Start with a 14-day trial." />
+        <SectionHead center eyebrow="Pricing" title="Priced per agency, not per client" body="Every plan includes every live engine. Start with a 7-day free trial: 1 client audit and 10 leads on us." />
         <div className="grid md:grid-cols-3 gap-3 mt-14">
           {PLANS.map((p, i) => (
             <Reveal key={p.n} delay={i * 100}>
@@ -440,7 +437,7 @@ function Pricing({ cta }: { cta: { href: string; label: string } }) {
             </Reveal>
           ))}
         </div>
-        <p className="text-faint text-center mt-6">* Coming soon. Prices exclude VAT.</p>
+        <p className="text-faint text-center mt-6">Prices in USD, excluding tax. Cancel any time.</p>
       </div>
     </section>
   );

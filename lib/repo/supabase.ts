@@ -1,5 +1,5 @@
 import { createClient, FunctionsHttpError, type SupabaseClient } from "@supabase/supabase-js";
-import type { Agency, Audit, Client, Competitor, Credits, Invite, Lead, Member, Prompt, Result, Role, User, Widget } from "../types";
+import type { Agency, Audit, BillingStatus, Client, Competitor, Credits, Invite, Lead, Member, Prompt, Result, Role, User, Widget } from "../types";
 import type { Repo } from "./types";
 
 let sb: SupabaseClient | null = null;
@@ -29,6 +29,13 @@ async function call<T>(name: string, body: Record<string, unknown>): Promise<T> 
     throw new Error("Couldn't reach the server. Check your connection and try again.");
   }
   return data as T;
+}
+
+// Active prompts per client allowed on the agency's plan (enforced again by a database trigger).
+async function promptLimit(agencyId: string): Promise<number> {
+  const { data: a } = await db().from("agencies").select("plan").eq("id", agencyId).single();
+  const { data: al } = await db().from("plan_allowances").select("prompts_per_client").eq("plan", a?.plan ?? "trial").maybeSingle();
+  return (al?.prompts_per_client as number | undefined) ?? 5;
 }
 
 // Everything but response_text: the dashboard needs outcomes, not 5 KB of prose per answer.
@@ -150,7 +157,9 @@ export const supabaseRepo: Repo = {
     fail(error);
     const byDomain = new Map((clients as Client[]).map((c) => [c.domain, c]));
     const compRows = inputs.flatMap((i) => i.competitors.map((x) => ({ agency_id: agencyId, client_id: byDomain.get(i.domain)!.id, name: x.name, domain: x.domain })));
-    const promptRows = inputs.flatMap((i) => i.prompts.slice(0, 10).map((p, n) => ({ agency_id: agencyId, client_id: byDomain.get(i.domain)!.id, text: p.text, intent: p.intent, source: p.source, position: n })));
+    // Up to the plan's prompts-per-client are tracked; the rest are kept paused, ready to swap in.
+    const lim = await promptLimit(agencyId);
+    const promptRows = inputs.flatMap((i) => i.prompts.slice(0, 20).map((p, n) => ({ agency_id: agencyId, client_id: byDomain.get(i.domain)!.id, text: p.text, intent: p.intent, source: p.source, position: n, active: n < lim })));
     const [comps, prompts] = await Promise.all([
       compRows.length ? db().from("competitors").insert(compRows).select("id, client_id, name, domain") : Promise.resolve({ data: [], error: null }),
       promptRows.length ? db().from("prompts").insert(promptRows).select("*") : Promise.resolve({ data: [], error: null }),
@@ -179,13 +188,11 @@ export const supabaseRepo: Repo = {
 
   async addPrompt(agencyId, clientId, text, intent) {
     const { data, error } = await db().from("prompts").insert({ agency_id: agencyId, client_id: clientId, text, intent, source: "manual", position: 99 }).select("*").single();
-    if (error?.message.includes("at most 10")) throw new Error("Each client tracks up to 10 prompts. Pause one to add another.");
     fail(error);
     return data as Prompt;
   },
   async updatePrompt(id, patch) {
     const { data, error } = await db().from("prompts").update(patch).eq("id", id).select("*").single();
-    if (error?.message.includes("at most 10")) throw new Error("Each client tracks up to 10 prompts. Pause one first.");
     fail(error);
     return data as Prompt;
   },
@@ -264,6 +271,11 @@ export const supabaseRepo: Repo = {
   },
   async selfAudit(agencyId) {
     return (await call<{ audit_id: string }>("sprint", { agency_id: agencyId, action: "self" })).audit_id;
+  },
+  billingStatus: (agencyId) => call<BillingStatus>("billing", { agency_id: agencyId, action: "status" }),
+  checkout: (agencyId, plan, returnPath) => call<{ url?: string; updated?: boolean }>("billing", { agency_id: agencyId, action: "checkout", plan, return_path: returnPath }),
+  async billingPortal(agencyId, returnPath) {
+    return (await call<{ url: string }>("billing", { agency_id: agencyId, action: "portal", return_path: returnPath })).url;
   },
   async runLite(agencyId, auditId) {
     await call("strategy-run", { agency_id: agencyId, audit_id: auditId, depth: "lite" });

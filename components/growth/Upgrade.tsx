@@ -12,7 +12,7 @@ export const useUpgrade = create<{ feature: Feature | null; show: (f: Feature) =
   hide: () => set({ feature: null }),
 }));
 
-const STARTER = ["Editable pitch decks and closing scripts", "Full 25-prompt blueprints with search volume", "Lead widget for your website", "Strategy Engine runs every month", "Day-1 fixes for your clients' sites"];
+const STARTER = ["10 unmasked pitch decks a month", "Day-1 fixes for your agency and 10 client fix packs", "25 branded PDF audits and 25 new leads a month", "Lead widget on 2 of your sites", "Full 25-prompt blueprints and closing scripts"];
 
 export function UpgradeDialog() {
   const { feature, hide } = useUpgrade();
@@ -29,10 +29,10 @@ export function UpgradeDialog() {
             {STARTER.map((t) => <li key={t} className="flex items-center gap-2 text-ink"><Check size={13} weight="bold" className="text-blue" />{t}</li>)}
           </ul>
           <div className="flex gap-2 mt-6">
-            <Link href="/billing" onClick={hide} className="btn btn-primary flex-1">See plans</Link>
+            <Link href="/billing" onClick={hide} className="btn btn-primary flex-1">Upgrade to Starter</Link>
             <button className="btn btn-ghost" onClick={hide}>Not now</button>
           </div>
-          <p className="text-faint t-12 mt-3">Starter is $149 a month. Your free audits and PDFs stay yours either way.</p>
+          <p className="text-faint t-12 mt-3">Starter is $299 a month. Your free audits and PDFs stay yours either way.</p>
         </div>
       )}
     </Dialog>

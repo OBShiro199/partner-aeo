@@ -21,7 +21,26 @@ export type Agency = {
   tour_completed_at: string | null;
   sprint?: { client_url: string; niche: string; location: string; region?: string } | null;
   sprint_used_at?: string | null;
+  trial_ends_at?: string | null;
+  stripe_customer_id?: string | null;
+  subscription_status?: string | null;
+  subscribed_plan?: string | null;
+  current_period_end?: string | null;
+  cancel_at_period_end?: boolean;
   created_at: string;
+};
+
+export type BillingStatus = {
+  configured: boolean;      // Stripe secret key is set on the server
+  require_card: boolean;    // card up front before the free audits
+  has_card: boolean;        // a trialing / active / past_due subscription exists
+  trial_days: number;
+  plan: string;
+  subscription_status: string | null;
+  subscribed_plan: string | null;
+  trial_ends_at: string | null;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
 };
 
 export type Member = { user_id: string; role: Role; email: string; full_name: string; created_at: string };
