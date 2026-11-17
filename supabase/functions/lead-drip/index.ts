@@ -10,6 +10,20 @@ const SKIP = /(^|\.)(yelp|facebook|instagram|linkedin|google|angi|homeadvisor|th
 const rootOf = (u: string) => { try { return new URL(/^https?:/.test(u) ? u : `https://${u}`).hostname.replace(/^www\./, "").toLowerCase(); } catch { return ""; } };
 const esc = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 
+// Keep addresses a prospect would answer: on the business's own domain or a personal mailbox,
+// never job, no-reply or legal inboxes, and nothing scraped from someone else's site.
+const FREE_MAIL = /^(gmail|googlemail|yahoo|hotmail|outlook|live|icloud|me|aol|msn|proton|protonmail)\./;
+const ROLE_SKIP = /^(careers?|jobs?|hr|recruit\w*|no-?reply|donotreply|privacy|legal|abuse|postmaster|webmaster|example|test)$/;
+function cleanEmails(list: string[], domain: string): string[] {
+  const root = domain.split(".").slice(-2).join(".");
+  const ok = list.map((e) => e.trim().toLowerCase()).filter((e) => {
+    const m = /^([^@\s]+)@([a-z0-9.-]+\.[a-z]{2,})$/.exec(e);
+    if (!m || ROLE_SKIP.test(m[1]) || /\.(png|jpe?g|gif|webp|svg)$/.test(e)) return false;
+    return m[2] === root || m[2].endsWith(`.${root}`) || m[2] === domain || FREE_MAIL.test(m[2]);
+  });
+  return [...new Set(ok)].slice(0, 5);
+}
+
 type Place = {
   name?: string; website?: string; phone?: string; phones?: string[]; emails?: string[]; address?: string; category?: string;
   rating?: number; reviewCount?: number; url?: string; facebooks?: string[]; instagrams?: string[]; linkedIns?: string[];
@@ -123,7 +137,7 @@ Deno.serve(handle(async (req) => {
   const rows = ranked.map(({ p, t }) => ({
     agency_id: agencyId, batch_id: batchId, source: "treg", niche, location,
     name: (p.name ?? p.domain).slice(0, 200), domain: p.domain, website: p.website ?? `https://${p.domain}`,
-    phone: p.phone ?? p.phones?.[0] ?? null, emails: [...new Set((p.emails ?? []).map((e) => e.toLowerCase()))].slice(0, 5),
+    phone: p.phone ?? p.phones?.[0] ?? null, emails: cleanEmails(p.emails ?? [], p.domain),
     socials: { facebook: p.facebooks ?? [], instagram: p.instagrams ?? [], linkedin: p.linkedIns ?? [] },
     address: p.address ?? null, category: p.category ?? null, rating: p.rating ?? null, reviews: p.reviewCount ?? null, maps_url: p.url ?? null,
     tech: t, tech_score: t.score,
