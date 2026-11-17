@@ -50,7 +50,7 @@ export async function logUsage(
   db: SupabaseClient,
   row: {
     agency_id: string | null;
-    provider: "dataforseo" | "anthropic" | "site";
+    provider: "dataforseo" | "anthropic" | "site" | "treg";
     endpoint: string;
     status: "ok" | "error" | "blocked";
     http_status?: number | null;
